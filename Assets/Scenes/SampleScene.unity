@@ -317,6 +317,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetTransform: {fileID: 1748715902}
+  handleType: 0
   handleSize: 1
   screenSizeMultiplier: 0.1
   maintainConstantScreenSize: 1
