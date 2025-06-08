@@ -12,7 +12,7 @@ namespace TransformHandle
         private readonly Color zAxisColor = Color.blue;
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
-        private readonly float lineThickness = 3f; // Thickness for all lines
+        private readonly float lineThickness = 6f; // Thickness for all lines
         
         public void Render(Transform target, float scale, int hoveredAxis, float alpha = 1f)
         {
