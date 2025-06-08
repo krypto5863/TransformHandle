@@ -18,8 +18,7 @@ namespace TransformHandle
         
         // Drag data
         private Vector3 dragStartPosition;
-        private Vector3 dragStartMousePosition;
-        private Plane dragPlane;
+        private Vector2 dragStartMouseScreenPos; // Mouse position at drag start
         
         // Rotation data
         private Quaternion rotationStartOrientation;
@@ -145,48 +144,37 @@ namespace TransformHandle
             DraggedAxis = HoveredAxis;
             dragStartPosition = target.position;
             
-            // Get mouse position
-            Vector2 mousePos = Mouse.current.position.ReadValue();
-            Ray ray = mainCamera.ScreenPointToRay(mousePos);
-            
-            // Create drag plane
-            Vector3 axisDirection = GetAxisDirection(DraggedAxis);
-            Vector3 planeNormal = Vector3.Cross(axisDirection, mainCamera.transform.right);
-            if (planeNormal.magnitude < 0.1f)
-            {
-                planeNormal = Vector3.Cross(axisDirection, mainCamera.transform.up);
-            }
-            planeNormal.Normalize();
-            
-            dragPlane = new Plane(planeNormal, target.position);
-            
-            // Store initial mouse position on plane
-            float enter;
-            if (dragPlane.Raycast(ray, out enter))
-            {
-                dragStartMousePosition = ray.GetPoint(enter);
-            }
+            // Store the initial mouse position in screen space
+            dragStartMouseScreenPos = Mouse.current.position.ReadValue();
         }
         
         private void UpdateDrag(Vector2 mousePos)
         {
             if (DraggedAxis < 0) return;
             
-            Ray ray = mainCamera.ScreenPointToRay(mousePos);
-            float enter;
+            // Get axis direction in world space
+            Vector3 axisDirection = GetAxisDirection(DraggedAxis);
             
-            if (dragPlane.Raycast(ray, out enter))
-            {
-                Vector3 currentMousePosition = ray.GetPoint(enter);
-                Vector3 mouseDelta = currentMousePosition - dragStartMousePosition;
-                
-                // Project delta onto axis
-                Vector3 axisDirection = GetAxisDirection(DraggedAxis);
-                float distance = Vector3.Dot(mouseDelta, axisDirection);
-                
-                // Apply movement
-                target.position = dragStartPosition + axisDirection * distance;
-            }
+            // Convert axis direction to screen space
+            Vector3 handleScreenPos = mainCamera.WorldToScreenPoint(target.position);
+            Vector3 axisEndScreen = mainCamera.WorldToScreenPoint(target.position + axisDirection);
+            
+            // Get screen space axis direction
+            Vector2 axisScreenDir = new Vector2(axisEndScreen.x - handleScreenPos.x, 
+                                                axisEndScreen.y - handleScreenPos.y).normalized;
+            
+            // Calculate mouse delta from the initial click position
+            Vector2 mouseDelta = mousePos - dragStartMouseScreenPos;
+            
+            // Project mouse delta onto screen space axis direction
+            float projectedDistance = Vector2.Dot(mouseDelta, axisScreenDir);
+            
+            // Convert screen distance to world distance
+            float distanceToCamera = Vector3.Distance(mainCamera.transform.position, dragStartPosition);
+            float worldUnitsPerPixel = (2.0f * distanceToCamera * Mathf.Tan(mainCamera.fieldOfView * 0.5f * Mathf.Deg2Rad)) / Screen.height;
+            
+            // Apply movement along the axis
+            target.position = dragStartPosition + axisDirection * (projectedDistance * worldUnitsPerPixel);
         }
         
         private void EndDrag()

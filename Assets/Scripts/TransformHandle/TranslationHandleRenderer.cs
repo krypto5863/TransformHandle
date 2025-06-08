@@ -53,15 +53,52 @@ namespace TransformHandle
             
             Vector3 arrowBase = tip - direction * size;
             
-            GL.Begin(GL.LINES);
-            GL.Color(color);
-            
-            float baseSize = size * 0.5f;
+            float baseSize = size * 0.4f;
             Vector3[] basePoints = new Vector3[4];
             basePoints[0] = arrowBase + perpendicular1 * baseSize;
             basePoints[1] = arrowBase - perpendicular1 * baseSize;
             basePoints[2] = arrowBase + perpendicular2 * baseSize;
             basePoints[3] = arrowBase - perpendicular2 * baseSize;
+            
+            // Draw filled triangles for the arrow head
+            GL.Begin(GL.TRIANGLES);
+            GL.Color(color);
+            
+            // Front face (4 triangles forming a pyramid)
+            // Triangle 1
+            GL.Vertex(tip);
+            GL.Vertex(basePoints[0]);
+            GL.Vertex(basePoints[2]);
+            
+            // Triangle 2
+            GL.Vertex(tip);
+            GL.Vertex(basePoints[2]);
+            GL.Vertex(basePoints[1]);
+            
+            // Triangle 3
+            GL.Vertex(tip);
+            GL.Vertex(basePoints[1]);
+            GL.Vertex(basePoints[3]);
+            
+            // Triangle 4
+            GL.Vertex(tip);
+            GL.Vertex(basePoints[3]);
+            GL.Vertex(basePoints[0]);
+            
+            // Base (2 triangles)
+            GL.Vertex(basePoints[0]);
+            GL.Vertex(basePoints[1]);
+            GL.Vertex(basePoints[2]);
+            
+            GL.Vertex(basePoints[1]);
+            GL.Vertex(basePoints[3]);
+            GL.Vertex(basePoints[2]);
+            
+            GL.End();
+            
+            // Draw outline for better definition
+            GL.Begin(GL.LINES);
+            GL.Color(color * 0.8f); // Slightly darker for outline
             
             // Lines from tip to base
             foreach (Vector3 basePoint in basePoints)
@@ -70,7 +107,7 @@ namespace TransformHandle
                 GL.Vertex(basePoint);
             }
             
-            // Base square
+            // Base outline
             GL.Vertex(basePoints[0]);
             GL.Vertex(basePoints[2]);
             GL.Vertex(basePoints[2]);
