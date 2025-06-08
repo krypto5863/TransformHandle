@@ -1,26 +1,30 @@
 using UnityEngine;
-using TransformHandle;
 
-/// <summary>
-/// Main component that manages transform handles in runtime
-/// </summary>
-public class TransformHandleManager : MonoBehaviour
+namespace TransformHandle
 {
-    [Header("Target")]
-    public Transform targetTransform;
-    
-    [Header("Handle Settings")]
-    public float handleSize = 1f;
-    public float screenSizeMultiplier = 0.1f;
-    public bool maintainConstantScreenSize = true;
-    
-    [Header("Render Settings")]
-    public bool alwaysOnTop = true;
-    
-    // Core components
-    private HandleRenderer renderer;
-    private HandleInteraction interaction;
-    private Camera mainCamera;
+    /// <summary>
+    /// Main component that manages transform handles in runtime
+    /// </summary>
+    public class TransformHandleManager : MonoBehaviour
+    {
+        [Header("Target")]
+        public Transform targetTransform;
+        
+        [Header("Handle Type")]
+        public HandleType handleType = HandleType.Translation;
+        
+        [Header("Handle Settings")]
+        public float handleSize = 1f;
+        public float screenSizeMultiplier = 0.1f;
+        public bool maintainConstantScreenSize = true;
+        
+        [Header("Render Settings")]
+        public bool alwaysOnTop = true;
+        
+        // Core components
+        private HandleRenderer handleRenderer;
+        private HandleInteraction interaction;
+        private Camera mainCamera;
     
     void Start()
     {
@@ -33,7 +37,7 @@ public class TransformHandleManager : MonoBehaviour
         }
         
         // Initialize components
-        renderer = new HandleRenderer();
+        handleRenderer = new HandleRenderer();
         interaction = new HandleInteraction(mainCamera);
     }
     
@@ -44,14 +48,33 @@ public class TransformHandleManager : MonoBehaviour
         // Update interaction target
         interaction.UpdateTarget(targetTransform);
         
-        // Update interaction with current handle scale
+        // Update interaction with current handle scale and type
         float scale = GetHandleScale();
-        interaction.Update(scale);
+        interaction.Update(scale, handleType);
+        
+        // Handle input for switching handle types (optional)
+        HandleTypeSwithching();
+    }
+    
+    void HandleTypeSwithching()
+    {
+        // Example: Use W for Translation, E for Rotation (like Unity Editor)
+        if (UnityEngine.InputSystem.Keyboard.current != null)
+        {
+            if (UnityEngine.InputSystem.Keyboard.current.wKey.wasPressedThisFrame)
+            {
+                handleType = TransformHandle.HandleType.Translation;
+            }
+            else if (UnityEngine.InputSystem.Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                handleType = TransformHandle.HandleType.Rotation;
+            }
+        }
     }
     
     void OnRenderObject()
     {
-        if (targetTransform == null || mainCamera == null || renderer == null) return;
+        if (targetTransform == null || mainCamera == null || handleRenderer == null) return;
         
         // Only render in Game View (not in Scene View)
         #if UNITY_EDITOR
@@ -64,7 +87,7 @@ public class TransformHandleManager : MonoBehaviour
         
         // Render handles
         float scale = GetHandleScale();
-        renderer.Render(targetTransform, scale, interaction.HoveredAxis, alwaysOnTop);
+        handleRenderer.Render(targetTransform, scale, interaction.HoveredAxis, alwaysOnTop, handleType);
     }
     
     float GetHandleScale()
@@ -78,6 +101,7 @@ public class TransformHandleManager : MonoBehaviour
     
     void OnDestroy()
     {
-        renderer?.Cleanup();
+        handleRenderer?.Cleanup();
     }
+}
 }

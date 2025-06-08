@@ -320,11 +320,7 @@ MonoBehaviour:
   handleSize: 1
   screenSizeMultiplier: 0.1
   maintainConstantScreenSize: 1
-  xAxisColor: {r: 1, g: 0, b: 0, a: 1}
-  yAxisColor: {r: 0, g: 1, b: 0, a: 1}
-  zAxisColor: {r: 0, g: 0, b: 1, a: 1}
-  axisAlpha: 0.8
-  selectedAlpha: 1
+  alwaysOnTop: 1
 --- !u!4 &400818162
 Transform:
   m_ObjectHideFlags: 0
