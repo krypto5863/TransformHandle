@@ -13,7 +13,7 @@ namespace TransformHandle
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
         private readonly int circleSegments = 64;
-        private readonly float lineThickness = 6f; // Thickness for all circles
+        private readonly float lineThickness = 5f; // Thickness for all circles
         
         public void Render(Transform target, float scale, int hoveredAxis, float alpha = 1f)
         {
