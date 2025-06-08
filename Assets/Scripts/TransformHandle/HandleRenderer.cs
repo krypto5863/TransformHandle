@@ -34,7 +34,8 @@ namespace TransformHandle
             lineMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
             lineMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
             lineMaterial.SetInt("_ZWrite", 0);
-            lineMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+            // Removed: lineMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+            // Now uses default ZTest (LessEqual) so circles are properly occluded
             
             // Occluded material
             lineMaterialOccluded = new Material(shader);
@@ -53,6 +54,16 @@ namespace TransformHandle
             
             IHandleRenderer renderer = GetRenderer(handleType);
             if (renderer == null) return;
+            
+            // Update ZTest based on alwaysOnTop setting
+            if (alwaysOnTop)
+            {
+                lineMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+            }
+            else
+            {
+                lineMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+            }
             
             if (!alwaysOnTop)
             {

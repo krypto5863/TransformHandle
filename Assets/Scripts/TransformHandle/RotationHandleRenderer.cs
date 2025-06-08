@@ -13,6 +13,7 @@ namespace TransformHandle
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
         private readonly int circleSegments = 64;
+        private readonly float lineThickness = 3f; // Thickness for all circles
         
         public void Render(Transform target, float scale, int hoveredAxis, float alpha = 1f)
         {
@@ -35,36 +36,14 @@ namespace TransformHandle
             alpha *= alphaMultiplier;
             Color finalColor = new Color(color.r, color.g, color.b, alpha);
             
-            // Calculate two perpendicular vectors to the normal
-            Vector3 tangent1 = Vector3.Cross(normal, Vector3.up).normalized;
-            if (tangent1.magnitude < 0.1f)
-            {
-                tangent1 = Vector3.Cross(normal, Vector3.right).normalized;
-            }
-            Vector3 tangent2 = Vector3.Cross(normal, tangent1).normalized;
-            
             // Check if circle is edge-on to camera (hide if too thin)
             Vector3 toCamera = (camera.transform.position - center).normalized;
             float dot = Mathf.Abs(Vector3.Dot(normal, toCamera));
             if (dot > 0.98f) return; // Circle is too edge-on, don't draw
             
-            GL.Begin(GL.LINES);
-            GL.Color(finalColor);
-            
-            // Draw circle
-            for (int i = 0; i < circleSegments; i++)
-            {
-                float angle1 = (i / (float)circleSegments) * 2 * Mathf.PI;
-                float angle2 = ((i + 1) / (float)circleSegments) * 2 * Mathf.PI;
-                
-                Vector3 point1 = center + (tangent1 * Mathf.Cos(angle1) + tangent2 * Mathf.Sin(angle1)) * radius;
-                Vector3 point2 = center + (tangent1 * Mathf.Cos(angle2) + tangent2 * Mathf.Sin(angle2)) * radius;
-                
-                GL.Vertex(point1);
-                GL.Vertex(point2);
-            }
-            
-            GL.End();
+            // Draw thick circle
+            float thickness = (hoveredAxis == axisIndex) ? lineThickness * 1.5f : lineThickness;
+            ThickLineHelper.DrawThickCircle(center, normal, radius, finalColor, circleSegments, thickness);
         }
         
         private void DrawCameraFacingCircle(Vector3 center, float radius, float alpha)
@@ -72,31 +51,9 @@ namespace TransformHandle
             Camera camera = Camera.main;
             Vector3 normal = (camera.transform.position - center).normalized;
             
-            // Calculate perpendicular vectors
-            Vector3 tangent1 = Vector3.Cross(normal, Vector3.up).normalized;
-            if (tangent1.magnitude < 0.1f)
-            {
-                tangent1 = Vector3.Cross(normal, Vector3.right).normalized;
-            }
-            Vector3 tangent2 = Vector3.Cross(normal, tangent1).normalized;
-            
-            GL.Begin(GL.LINES);
             GL.Color(new Color(1f, 1f, 1f, 0.3f * alpha));
-            
-            // Draw outer circle
-            for (int i = 0; i < circleSegments; i++)
-            {
-                float angle1 = (i / (float)circleSegments) * 2 * Mathf.PI;
-                float angle2 = ((i + 1) / (float)circleSegments) * 2 * Mathf.PI;
-                
-                Vector3 point1 = center + (tangent1 * Mathf.Cos(angle1) + tangent2 * Mathf.Sin(angle1)) * radius;
-                Vector3 point2 = center + (tangent1 * Mathf.Cos(angle2) + tangent2 * Mathf.Sin(angle2)) * radius;
-                
-                GL.Vertex(point1);
-                GL.Vertex(point2);
-            }
-            
-            GL.End();
+            ThickLineHelper.DrawThickCircle(center, normal, radius, 
+                new Color(1f, 1f, 1f, 0.3f * alpha), circleSegments, lineThickness * 0.8f);
         }
     }
 }

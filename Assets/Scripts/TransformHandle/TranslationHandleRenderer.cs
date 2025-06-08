@@ -12,6 +12,7 @@ namespace TransformHandle
         private readonly Color zAxisColor = Color.blue;
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
+        private readonly float lineThickness = 3f; // Thickness for all lines
         
         public void Render(Transform target, float scale, int hoveredAxis, float alpha = 1f)
         {
@@ -33,12 +34,9 @@ namespace TransformHandle
             
             Vector3 endPoint = origin + direction * length;
             
-            // Draw main line
-            GL.Begin(GL.LINES);
-            GL.Color(finalColor);
-            GL.Vertex(origin);
-            GL.Vertex(endPoint);
-            GL.End();
+            // Draw main line with thickness
+            float thickness = (hoveredAxis == axisIndex) ? lineThickness * 1.5f : lineThickness;
+            ThickLineHelper.DrawThickLine(origin, endPoint, finalColor, thickness);
             
             // Draw arrow head
             DrawArrowHead(endPoint, direction, finalColor, length * 0.2f);
