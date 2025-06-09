@@ -97,32 +97,40 @@ namespace TransformHandle
 
         private float GetDistanceToCircle(Vector2 mousePos, Vector3 center, Vector3 normal, float radius)
         {
-            // Calculate circle points in world space
+            // compute two orthonormal tangent directions in world space
             Vector3 tangent1 = Vector3.Cross(normal, Vector3.up).normalized;
             if (tangent1.magnitude < 0.1f)
-            {
                 tangent1 = Vector3.Cross(normal, Vector3.right).normalized;
-            }
             Vector3 tangent2 = Vector3.Cross(normal, tangent1).normalized;
 
             float minDistance = float.MaxValue;
-            int segments = 32;
+            int segments = 64;
+            Vector3 camForward = mainCamera.transform.forward;
 
             for (int i = 0; i < segments; i++)
             {
                 float angle = (i / (float)segments) * 2 * Mathf.PI;
-                Vector3 worldPoint = center + (tangent1 * Mathf.Cos(angle) + tangent2 * Mathf.Sin(angle)) * radius;
-                Vector3 screenPoint = mainCamera.WorldToScreenPoint(worldPoint);
+                Vector3 dirOnPlane = tangent1 * Mathf.Cos(angle) + tangent2 * Mathf.Sin(angle);
+                Vector3 worldPoint = center + dirOnPlane * radius;
 
-                if (screenPoint.z > 0)
-                {
-                    float distance = Vector2.Distance(mousePos, new Vector2(screenPoint.x, screenPoint.y));
-                    minDistance = Mathf.Min(minDistance, distance);
-                }
+                // Only keep points on the front-facing half of the ellipse
+                if (Vector3.Dot(dirOnPlane, camForward) >= 0f)
+                    continue;
+
+                // project to screen space and skip if behind camera
+                Vector3 screenPoint = mainCamera.WorldToScreenPoint(worldPoint);
+                if (screenPoint.z <= 0f)
+                    continue;
+
+                // measure distance to mouse position
+                float dist = Vector2.Distance(mousePos, new Vector2(screenPoint.x, screenPoint.y));
+                if (dist < minDistance)
+                    minDistance = dist;
             }
 
             return minDistance;
         }
+
 
         private float DistancePointToLineSegment(Vector2 point, Vector2 lineStart, Vector2 lineEnd)
         {
