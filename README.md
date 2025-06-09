@@ -14,10 +14,13 @@ A professional runtime transform handle system for Unity, inspired by Unity's ed
 
 ## 📦 Installation
 
-### Option 1: Unity Package Manager (Git URL)
-1. Open the Package Manager in Unity
-2. Click "Add package from git URL"
-3. Enter: `https://github.com/yourusername/unity-runtime-transform-handles.git`
+### Recommended: Download the Scripts
+1. Download this repository as ZIP
+2. Extract and copy the `Assets/Scripts/TransformHandle` folder into your Unity project
+3. Make sure you have the Input System package installed
+
+### Coming Soon: Unity Package
+.unitypackage releases are planned for easier installation
 
 ### Option 2: Manual Installation
 1. Clone or download this repository
