@@ -3,13 +3,15 @@ using UnityEngine;
 namespace TransformHandle
 {
     /// <summary>
-    /// Handles the dragging logic for translation (movement) operations
+    /// Handles the dragging logic for translation (movement) operations,
+    /// respecting Local/Global handle space.
     /// </summary>
     public class TranslationDragHandler : IDragHandler
     {
         private Camera mainCamera;
         private Transform target;
         private int draggedAxis;
+        private HandleSpace handleSpace;
 
         private Vector3 dragStartPosition;
         private Vector2 dragStartMouseScreenPos;
@@ -19,10 +21,11 @@ namespace TransformHandle
             mainCamera = camera;
         }
 
-        public void StartDrag(Transform target, int axis, Vector2 mousePos)
+        public void StartDrag(Transform target, int axis, Vector2 mousePos, HandleSpace space)
         {
             this.target = target;
             this.draggedAxis = axis;
+            this.handleSpace = space;
 
             dragStartPosition = target.position;
             dragStartMouseScreenPos = mousePos;
@@ -32,29 +35,24 @@ namespace TransformHandle
         {
             if (target == null || draggedAxis < 0) return;
 
-            // Get axis direction in world space
-            Vector3 axisDirection = GetAxisDirection(draggedAxis);
+            // Determine axis direction based on space
+            Vector3 axisDirection = GetAxisDirection(draggedAxis, handleSpace);
 
-            // Convert axis direction to screen space
-            Vector3 handleScreenPos = mainCamera.WorldToScreenPoint(target.position);
-            Vector3 axisEndScreen = mainCamera.WorldToScreenPoint(target.position + axisDirection);
+            // Project axis to screen
+            Vector3 screenOrigin = mainCamera.WorldToScreenPoint(dragStartPosition);
+            Vector3 screenEnd    = mainCamera.WorldToScreenPoint(dragStartPosition + axisDirection);
 
-            // Get screen space axis direction
-            Vector2 axisScreenDir = new Vector2(axisEndScreen.x - handleScreenPos.x,
-                                                axisEndScreen.y - handleScreenPos.y).normalized;
+            Vector2 axisScreenDir = (new Vector2(screenEnd.x, screenEnd.y) - new Vector2(screenOrigin.x, screenOrigin.y)).normalized;
 
-            // Calculate mouse delta from the initial click position
+            // Mouse movement
             Vector2 mouseDelta = mousePos - dragStartMouseScreenPos;
-
-            // Project mouse delta onto screen space axis direction
             float projectedDistance = Vector2.Dot(mouseDelta, axisScreenDir);
 
-            // Convert screen distance to world distance
-            float distanceToCamera = Vector3.Distance(mainCamera.transform.position, dragStartPosition);
-            float worldUnitsPerPixel = (2.0f * distanceToCamera * Mathf.Tan(mainCamera.fieldOfView * 0.5f * Mathf.Deg2Rad)) / Screen.height;
+            // Convert screen delta to world units
+            float distToCam = Vector3.Distance(mainCamera.transform.position, dragStartPosition);
+            float worldPerPixel = (2f * distToCam * Mathf.Tan(mainCamera.fieldOfView * 0.5f * Mathf.Deg2Rad)) / Screen.height;
 
-            // Apply movement along the axis
-            target.position = dragStartPosition + axisDirection * (projectedDistance * worldUnitsPerPixel);
+            target.position = dragStartPosition + axisDirection * (projectedDistance * worldPerPixel);
         }
 
         public void EndDrag()
@@ -63,15 +61,13 @@ namespace TransformHandle
             draggedAxis = -1;
         }
 
-        private Vector3 GetAxisDirection(int axis)
+        private Vector3 GetAxisDirection(int axisIndex, HandleSpace space)
         {
-            if (target == null) return Vector3.zero;
-
-            switch (axis)
+            switch (axisIndex)
             {
-                case 0: return target.right;
-                case 1: return target.up;
-                case 2: return target.forward;
+                case 0: return space == HandleSpace.Local ? target.right   : Vector3.right;
+                case 1: return space == HandleSpace.Local ? target.up      : Vector3.up;
+                case 2: return space == HandleSpace.Local ? target.forward : Vector3.forward;
                 default: return Vector3.zero;
             }
         }

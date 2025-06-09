@@ -4,98 +4,88 @@ using UnityEngine.InputSystem;
 namespace TransformHandle
 {
     /// <summary>
-    /// Manages user input and coordinates interaction components
+    /// Manages user input and coordinates interaction components,
+    /// now supporting Local/Global handle space.
     /// </summary>
     public class HandleInteraction
     {
         private Camera mainCamera;
         private Transform target;
-        
+
         // Sub-components
         private HandleHoverDetector hoverDetector;
         private IDragHandler translationHandler;
         private IDragHandler rotationHandler;
         private IDragHandler currentDragHandler;
-        
+
         // Interaction state
         public int HoveredAxis { get; private set; } = -1;
-        public bool IsDragging { get; private set; }
-        public int DraggedAxis { get; private set; } = -1;
-        
+        public bool IsDragging   { get; private set; }
+        public int DraggedAxis   { get; private set; } = -1;
+
         public HandleInteraction(Camera camera)
         {
             mainCamera = camera;
-            
-            // Initialize sub-components
-            hoverDetector = new HandleHoverDetector(camera);
+            hoverDetector      = new HandleHoverDetector(camera);
             translationHandler = new TranslationDragHandler(camera);
-            rotationHandler = new RotationDragHandler(camera);
+            rotationHandler    = new RotationDragHandler(camera);
         }
-        
+
         public void UpdateTarget(Transform newTarget)
         {
             target = newTarget;
         }
-        
-        public void Update(float handleScale, HandleType handleType)
+
+        /// <summary>
+        /// Updates hover and drag state, taking into account handle type and space.
+        /// </summary>
+        public void Update(float handleScale, HandleType handleType, HandleSpace handleSpace)
         {
             if (target == null || mainCamera == null) return;
-            
-            Vector2 mousePos = Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-            bool mousePressed = Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-            bool mouseReleased = Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
-            
+
+            Vector2 mousePos     = Mouse.current?.position.ReadValue() ?? Vector2.zero;
+            bool    mousePressed = Mouse.current?.leftButton.wasPressedThisFrame  ?? false;
+            bool    mouseReleased= Mouse.current?.leftButton.wasReleasedThisFrame ?? false;
+
             if (!IsDragging)
             {
-                // Update hover state
-                HoveredAxis = hoverDetector.GetHoveredAxis(mousePos, target, handleScale, handleType);
-                
+                // Update hover state with space
+                HoveredAxis = hoverDetector.GetHoveredAxis(mousePos, target, handleScale, handleType, handleSpace);
+
                 // Start drag if mouse pressed on a handle
                 if (mousePressed && HoveredAxis >= 0)
-                {
-                    StartDrag(handleType, mousePos);
-                }
+                    StartDrag(handleType, handleSpace, mousePos);
             }
             else
             {
-                // Update current drag
+                // Continue drag
                 currentDragHandler?.UpdateDrag(mousePos);
-                
+
                 // End drag if mouse released
                 if (mouseReleased)
-                {
                     EndDrag();
-                }
             }
         }
-        
-        private void StartDrag(HandleType handleType, Vector2 mousePos)
+
+        private void StartDrag(HandleType handleType, HandleSpace handleSpace, Vector2 mousePos)
         {
-            IsDragging = true;
+            IsDragging  = true;
             DraggedAxis = HoveredAxis;
-            
-            // Select appropriate drag handler
-            switch (handleType)
-            {
-                case HandleType.Translation:
-                    currentDragHandler = translationHandler;
-                    break;
-                case HandleType.Rotation:
-                    currentDragHandler = rotationHandler;
-                    break;
-                default:
-                    return;
-            }
-            
-            currentDragHandler.StartDrag(target, DraggedAxis, mousePos);
+
+            // Choose handler
+            currentDragHandler = handleType == HandleType.Translation
+                                 ? translationHandler
+                                 : rotationHandler;
+
+            // Pass space into StartDrag
+            currentDragHandler.StartDrag(target, DraggedAxis, mousePos, handleSpace);
         }
-        
+
         private void EndDrag()
         {
             currentDragHandler?.EndDrag();
             currentDragHandler = null;
-            
-            IsDragging = false;
+            IsDragging  = false;
             DraggedAxis = -1;
         }
     }
