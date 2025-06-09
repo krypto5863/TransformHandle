@@ -297,6 +297,7 @@ GameObject:
   m_Component:
   - component: {fileID: 400818162}
   - component: {fileID: 400818161}
+  - component: {fileID: 400818163}
   m_Layer: 0
   m_Name: HandleManager
   m_TagString: Untagged
@@ -317,11 +318,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetTransform: {fileID: 1748715902}
-  handleType: 0
+  maintainConstantScreenSize: 1
   handleSize: 1
   screenSizeMultiplier: 0.1
-  maintainConstantScreenSize: 1
-  alwaysOnTop: 1
+  handleType: 0
+  handleSpace: 0
 --- !u!4 &400818162
 Transform:
   m_ObjectHideFlags: 0
@@ -337,6 +338,66 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &400818163
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400818160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22e90c12309feac43af4b79bf5888af9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  translationKey: 37
+  onSetTranslation:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 400818161}
+        m_TargetAssemblyTypeName: TransformHandle.TransformHandleManager, Assembly-CSharp
+        m_MethodName: SetTranslationMode
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  rotationKey: 19
+  onSetRotation:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 400818161}
+        m_TargetAssemblyTypeName: TransformHandle.TransformHandleManager, Assembly-CSharp
+        m_MethodName: SetRotationMode
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  handleSpaceToggleKey: 38
+  onToggleHandleSpace:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 400818161}
+        m_TargetAssemblyTypeName: TransformHandle.TransformHandleManager, Assembly-CSharp
+        m_MethodName: ToggleHandleSpace
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0

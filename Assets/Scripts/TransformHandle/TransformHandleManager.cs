@@ -1,11 +1,11 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace TransformHandle
 {
     /// <summary>
     /// Main component that manages transform handles in runtime,
-    /// allowing toggling between Translation/Rotation and Local/Global modes.
+    /// allowing setting between Translation/Rotation and toggling Local/Global modes.
+    /// Methods are exposed for external key event binding.
     /// </summary>
     public class TransformHandleManager : MonoBehaviour
     {
@@ -13,29 +13,19 @@ namespace TransformHandle
         [Tooltip("The transform to manipulate with the handles.")]
         public Transform targetTransform;
 
-        [Header("Handle Type")]
-        [Tooltip("Select Translation or Rotation handles.")]
-        public HandleType handleType = HandleType.Translation;
-
-        [Header("Handle Space")]
-        [Tooltip("Select Local (object space) or Global (world space) axes.")]
-        public HandleSpace handleSpace = HandleSpace.Local;
-
         [Header("Handle Settings")]
-        [Tooltip("Base size of the handles. Scales with distance if Maintain Constant Screen Size is enabled.")]
-        public float handleSize = 1f;
         [Tooltip("Maintain a constant on-screen size regardless of distance.")]
         public bool maintainConstantScreenSize = true;
+        [Tooltip("Base size of the handles. Scales with distance if Maintain Constant Screen Size is enabled.")]
+        public float handleSize = 1f;
         [Tooltip("Multiplier applied when maintaining constant screen size.")]
         public float screenSizeMultiplier = 0.1f;
-        [Tooltip("Render handles on top of all geometry.")]
-        public bool alwaysOnTop = true;
 
-        [Header("Input Keys")]
-        [Tooltip("Key to toggle between Translation and Rotation handles.")]
-        public Key toggleHandleTypeKey = Key.H;
-        [Tooltip("Key to toggle between Local and Global handle space.")]
-        public Key toggleHandleSpaceKey = Key.G;
+        [Header("State")]
+        [SerializeField]
+        private HandleType handleType = HandleType.Translation;
+        [SerializeField]
+        private HandleSpace handleSpace = HandleSpace.Local;
 
         private Camera mainCamera;
         private HandleInteraction interaction;
@@ -52,10 +42,6 @@ namespace TransformHandle
         {
             if (targetTransform == null || mainCamera == null) return;
 
-            // Toggle input
-            HandleTypeSwitching();
-            HandleSpaceSwitching();
-
             // Update interaction target every frame
             interaction.UpdateTarget(targetTransform);
 
@@ -65,41 +51,39 @@ namespace TransformHandle
         }
 
         /// <summary>
-        /// Toggles between Translation and Rotation handle modes.
+        /// Sets the handle mode to Translation.
         /// </summary>
-        private void HandleTypeSwitching()
+        public void SetTranslationMode()
         {
-            if (Keyboard.current?[toggleHandleTypeKey].wasPressedThisFrame ?? false)
-            {
-                handleType = (handleType == HandleType.Translation)
-                    ? HandleType.Rotation
-                    : HandleType.Translation;
-            }
+            handleType = HandleType.Translation;
+        }
+
+        /// <summary>
+        /// Sets the handle mode to Rotation.
+        /// </summary>
+        public void SetRotationMode()
+        {
+            handleType = HandleType.Rotation;
         }
 
         /// <summary>
         /// Toggles between Local and Global axis space.
         /// </summary>
-        private void HandleSpaceSwitching()
+        public void ToggleHandleSpace()
         {
-            if (Keyboard.current?[toggleHandleSpaceKey].wasPressedThisFrame ?? false)
-            {
-                handleSpace = (handleSpace == HandleSpace.Local)
-                    ? HandleSpace.Global
-                    : HandleSpace.Local;
-            }
+            handleSpace = (handleSpace == HandleSpace.Local)
+                ? HandleSpace.Global
+                : HandleSpace.Local;
         }
 
         void OnRenderObject()
         {
             if (targetTransform == null || mainCamera == null) return;
 
-            // Only render in Game View
             #if UNITY_EDITOR
             if (UnityEditor.SceneView.currentDrawingSceneView != null) return;
             #endif
 
-            // Cull if behind camera
             Vector3 vp = mainCamera.WorldToViewportPoint(targetTransform.position);
             if (vp.z < 0f) return;
 
@@ -108,14 +92,10 @@ namespace TransformHandle
                 targetTransform,
                 scale,
                 interaction.HoveredAxis,
-                alwaysOnTop,
                 handleType,
                 handleSpace);
         }
 
-        /// <summary>
-        /// Computes the handle scale, optionally maintaining a constant screen size.
-        /// </summary>
         private float GetHandleScale()
         {
             if (!maintainConstantScreenSize || mainCamera == null)

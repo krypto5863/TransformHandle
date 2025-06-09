@@ -18,6 +18,8 @@ namespace TransformHandle
         private Vector2 centerScreen2D;
         private Vector2 ellipseTangent;
 
+        private readonly float rotationResolutionMultiplier = 200f;
+
         public RotationDragHandler(Camera camera)
         {
             mainCamera = camera;
@@ -47,7 +49,7 @@ namespace TransformHandle
             float projected = Vector2.Dot(delta, ellipseTangent);
 
             // Convert pixel movement to radians
-            float pixelsPerRadian = GetHandleScale() * 50f;
+            float pixelsPerRadian = GetHandleScale() * rotationResolutionMultiplier;
             float angleRad = projected / pixelsPerRadian;
 
             // Determine rotation direction via cross of start/current
