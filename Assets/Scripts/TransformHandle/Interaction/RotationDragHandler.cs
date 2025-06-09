@@ -16,7 +16,6 @@ namespace TransformHandle
 
         private Vector2 centerScreen2D;
         private Vector2 ellipseTangent;
-        private float ellipseClickAngle;
 
         public RotationDragHandler(Camera camera)
         {
@@ -50,27 +49,31 @@ namespace TransformHandle
                 tangent1 = Vector3.Cross(worldAxis, Vector3.right).normalized;
             Vector3 tangent2 = Vector3.Cross(worldAxis, tangent1).normalized;
 
+            // Find the angle on the circle that corresponds to the click position
+            // We use the click direction from center to determine the angle
+            Vector2 clickDir = (clickPos - centerScreen2D).normalized;
+            
+            // Find the best matching angle by projecting screen directions
             float bestAngle = 0f;
-            float minDistance = float.MaxValue;
-
-            // Sample the circle to find closest point to click
-            for (int i = 0; i < 360; i++)
+            float maxDot = -1f;
+            
+            // Sample fewer points for performance
+            for (int i = 0; i < 36; i++) // 36 samples = every 10 degrees
             {
-                float angle = i * Mathf.Deg2Rad;
+                float angle = i * 10f * Mathf.Deg2Rad;
                 Vector3 pointOnCircle = target.position
-                    + (tangent1 * Mathf.Cos(angle) + tangent2 * Mathf.Sin(angle)) * GetHandleScale();
+                    + (tangent1 * Mathf.Cos(angle) + tangent2 * Mathf.Sin(angle));
                 Vector3 screenPoint = mainCamera.WorldToScreenPoint(pointOnCircle);
-                Vector2 screenPoint2D = new Vector2(screenPoint.x, screenPoint.y);
+                Vector2 screenDir = new Vector2(screenPoint.x - centerScreen2D.x, 
+                                               screenPoint.y - centerScreen2D.y).normalized;
 
-                float dist = Vector2.Distance(clickPos, screenPoint2D);
-                if (dist < minDistance)
+                float dot = Vector2.Dot(clickDir, screenDir);
+                if (dot > maxDot)
                 {
-                    minDistance = dist;
+                    maxDot = dot;
                     bestAngle = angle;
                 }
             }
-
-            ellipseClickAngle = bestAngle;
 
             // Compute the 3D tangent direction at this angle
             Vector3 tangentDir3D = -tangent1 * Mathf.Sin(bestAngle) + tangent2 * Mathf.Cos(bestAngle);
