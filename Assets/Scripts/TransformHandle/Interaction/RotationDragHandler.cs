@@ -14,10 +14,9 @@ namespace TransformHandle
         private Quaternion rotationStartOrientation;
         private Vector2 rotationStartMousePos;
 
-        // neu:
         private Vector2 centerScreen2D;
-        private float pixelRadius;
-        private Vector2 tangentScreenDir;
+        private Vector2 ellipseTangent;
+        private float ellipseClickAngle;
 
         public RotationDragHandler(Camera camera)
         {
@@ -32,42 +31,88 @@ namespace TransformHandle
             rotationStartOrientation = target.rotation;
             rotationStartMousePos = mousePos;
 
-            // 1. Bildschirm-Mittelpunkt ermitteln
+            // Get center in screen space
             Vector3 centerWorld = target.position;
             Vector3 centerScreen3D = mainCamera.WorldToScreenPoint(centerWorld);
             centerScreen2D = new Vector2(centerScreen3D.x, centerScreen3D.y);
 
-            // 2. Klick-Radius und normalisierte Richtung
-            Vector2 startDir = (rotationStartMousePos - centerScreen2D).normalized;
-            pixelRadius = Vector2.Distance(rotationStartMousePos, centerScreen2D);
+            // Calculate ellipse tangent at click point
+            CalculateEllipseTangent(mousePos, axis);
+        }
 
-            // 3. Tangente (90° zur Radius-Richtung, CCW)
-            tangentScreenDir = new Vector2(-startDir.y, startDir.x);
+        private void CalculateEllipseTangent(Vector2 clickPos, int axis)
+        {
+            Vector3 worldAxis = GetWorldRotationAxis(axis);
 
-                        // —— Spiegeln, falls Achse vom Betrachter weg zeigt ——
-            Vector3 worldAxis = GetWorldRotationAxis(draggedAxis);
-            float facing = Vector3.Dot(worldAxis, mainCamera.transform.forward);
-            if (facing < 0f)
-                tangentScreenDir = -tangentScreenDir;
+            // Compute two orthonormal tangents in the rotation plane
+            Vector3 tangent1 = Vector3.Cross(worldAxis, Vector3.up).normalized;
+            if (tangent1.magnitude < 0.1f)
+                tangent1 = Vector3.Cross(worldAxis, Vector3.right).normalized;
+            Vector3 tangent2 = Vector3.Cross(worldAxis, tangent1).normalized;
+
+            float bestAngle = 0f;
+            float minDistance = float.MaxValue;
+
+            // Sample the circle to find closest point to click
+            for (int i = 0; i < 360; i++)
+            {
+                float angle = i * Mathf.Deg2Rad;
+                Vector3 pointOnCircle = target.position
+                    + (tangent1 * Mathf.Cos(angle) + tangent2 * Mathf.Sin(angle)) * GetHandleScale();
+                Vector3 screenPoint = mainCamera.WorldToScreenPoint(pointOnCircle);
+                Vector2 screenPoint2D = new Vector2(screenPoint.x, screenPoint.y);
+
+                float dist = Vector2.Distance(clickPos, screenPoint2D);
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    bestAngle = angle;
+                }
+            }
+
+            ellipseClickAngle = bestAngle;
+
+            // Compute the 3D tangent direction at this angle
+            Vector3 tangentDir3D = -tangent1 * Mathf.Sin(bestAngle) + tangent2 * Mathf.Cos(bestAngle);
+
+            // Project the tangent to screen space
+            Vector3 tangentEndWorld = target.position + tangentDir3D;
+            Vector3 tangentEndScreen = mainCamera.WorldToScreenPoint(tangentEndWorld);
+
+            ellipseTangent = new Vector2(
+                tangentEndScreen.x - centerScreen2D.x,
+                tangentEndScreen.y - centerScreen2D.y
+            ).normalized;
         }
 
         public void UpdateDrag(Vector2 mousePos)
         {
-            if (target == null || draggedAxis < 0) return;
-            if (pixelRadius < 0.1f) return; // Schutz vor Division durch Null
-
-            // 4. Mausverschiebung entlang der Tangente projizieren
+            // Calculate raw projection onto ellipse tangent
             Vector2 delta = mousePos - rotationStartMousePos;
-            float projected = Vector2.Dot(delta, tangentScreenDir);
+            float projected = Vector2.Dot(delta, ellipseTangent);
 
-            // 5. Pixel-Abstand in Grad umrechnen
-            float angle = (projected / pixelRadius) * Mathf.Rad2Deg;
+            // Convert pixel movement to radians
+            float pixelsPerRadian = GetHandleScale() * 50f;
+            float angleRad = projected / pixelsPerRadian;
 
-            // 6. Welt-Rotationsachse (wie gehabt aus Start-Orientierung)
-            Vector3 rotationAxis = GetWorldRotationAxis(draggedAxis);
+            // Determine rotation direction via 2D cross product of radius vectors
+            Vector2 startDir = (rotationStartMousePos - centerScreen2D).normalized;
+            Vector2 currentDir = (mousePos - centerScreen2D).normalized;
+            float crossZ = startDir.x * currentDir.y - startDir.y * currentDir.x;
+            float signCross = Mathf.Sign(crossZ);
 
-            // 7. Rotation anwenden
-            target.rotation = Quaternion.AngleAxis(angle, rotationAxis) * rotationStartOrientation;
+            // Determine if axis faces camera or away for final sign
+            Vector3 viewDir = (target.position - mainCamera.transform.position).normalized;
+            Vector3 worldAxis = GetWorldRotationAxis(draggedAxis);
+            float facing = Vector3.Dot(worldAxis, viewDir);
+            float facingSign = facing < 0f ? -1f : 1f;
+
+            // Apply sign corrections
+            angleRad = Mathf.Abs(angleRad) * signCross * facingSign;
+            float angleDeg = angleRad * Mathf.Rad2Deg;
+
+            // Apply rotation
+            target.rotation = Quaternion.AngleAxis(angleDeg, worldAxis) * rotationStartOrientation;
         }
 
         public void EndDrag()
@@ -76,14 +121,19 @@ namespace TransformHandle
             draggedAxis = -1;
         }
 
+        private float GetHandleScale()
+        {
+            float distance = Vector3.Distance(mainCamera.transform.position, target.position);
+            return distance * 0.1f;
+        }
+
         private Vector3 GetWorldRotationAxis(int axis)
         {
-            // Use the axes from the START orientation, not current
             switch (axis)
             {
-                case 0: return rotationStartOrientation * Vector3.forward;  // X rotation (red circle)
-                case 1: return rotationStartOrientation * Vector3.right;    // Y rotation (green circle)
-                case 2: return rotationStartOrientation * Vector3.up;       // Z rotation (blue circle)
+                case 0: return rotationStartOrientation * Vector3.forward;
+                case 1: return rotationStartOrientation * Vector3.right;
+                case 2: return rotationStartOrientation * Vector3.up;
                 default: return Vector3.up;
             }
         }
