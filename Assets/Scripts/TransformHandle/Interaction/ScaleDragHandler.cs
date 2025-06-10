@@ -14,13 +14,10 @@ namespace TransformHandle
 
         private Vector3 scaleStartValue;
         private Vector2 dragStartMousePos;
-        private float dragStartDistance;
         private Vector3 dragAxisDirection;
 
         // Settings
         private readonly float scaleSpeed = 0.01f;
-        private readonly float minScale = 0.001f;
-        private readonly bool allowNegativeScale = false;
 
         public ScaleDragHandler(Camera camera)
         {
@@ -36,11 +33,6 @@ namespace TransformHandle
             scaleStartValue = target.localScale;
             dragStartMousePos = mousePos;
 
-            // Calculate initial distance for relative scaling
-            Vector3 handlePos = GetHandlePosition(axis);
-            Vector3 screenPos = mainCamera.WorldToScreenPoint(handlePos);
-            dragStartDistance = Vector2.Distance(mousePos, new Vector2(screenPos.x, screenPos.y));
-
             // Store axis direction for axis-constrained scaling
             dragAxisDirection = GetScaleAxisMask(axis);
         }
@@ -51,27 +43,22 @@ namespace TransformHandle
 
             // Calculate mouse movement along the handle direction
             Vector2 mouseDelta = mousePos - dragStartMousePos;
-
+            
             // Project mouse movement onto screen-space axis for better control
             Vector3 handleScreenPos = mainCamera.WorldToScreenPoint(target.position);
-            Vector2 screenCenter = new Vector2(handleScreenPos.x, handleScreenPos.y);
-
+            
             // Get screen direction of the handle
             Vector3 worldDir = GetWorldAxisDirection(draggedAxis);
             Vector3 screenEndPos = mainCamera.WorldToScreenPoint(target.position + worldDir);
-            Vector2 screenDir = new Vector2(screenEndPos.x - handleScreenPos.x,
+            Vector2 screenDir = new Vector2(screenEndPos.x - handleScreenPos.x, 
                                            screenEndPos.y - handleScreenPos.y).normalized;
 
             // Project mouse delta onto axis direction
             float projectedDelta = Vector2.Dot(mouseDelta, screenDir);
-
+            
             // Convert to scale factor
             float scaleFactor = 1f + (projectedDelta * scaleSpeed);
-
-            // Apply constraints
-            if (!allowNegativeScale)
-                scaleFactor = Mathf.Max(scaleFactor, minScale / Mathf.Max(scaleStartValue.x, scaleStartValue.y, scaleStartValue.z));
-
+            
             // Apply scale based on axis
             if (draggedAxis == 3) // Center handle - uniform scale
             {
@@ -83,12 +70,7 @@ namespace TransformHandle
                 newScale.x *= Mathf.Lerp(1f, scaleFactor, dragAxisDirection.x);
                 newScale.y *= Mathf.Lerp(1f, scaleFactor, dragAxisDirection.y);
                 newScale.z *= Mathf.Lerp(1f, scaleFactor, dragAxisDirection.z);
-
-                // Clamp to minimum
-                newScale.x = Mathf.Max(newScale.x, minScale);
-                newScale.y = Mathf.Max(newScale.y, minScale);
-                newScale.z = Mathf.Max(newScale.z, minScale);
-
+                
                 target.localScale = newScale;
             }
         }
@@ -97,15 +79,6 @@ namespace TransformHandle
         {
             target = null;
             draggedAxis = -1;
-        }
-
-        private Vector3 GetHandlePosition(int axis)
-        {
-            if (axis == 3) return target.position; // Center handle
-
-            Vector3 direction = GetWorldAxisDirection(axis);
-            float scale = Vector3.Distance(mainCamera.transform.position, target.position) * 0.1f;
-            return target.position + direction * scale;
         }
 
         private Vector3 GetWorldAxisDirection(int axis)
