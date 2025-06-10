@@ -1,9 +1,3 @@
-using UnityEngine;
-
-public class HandleType
-{
-    
-}
 namespace TransformHandle
 {
     /// <summary>
@@ -13,7 +7,7 @@ namespace TransformHandle
     {
         Translation,  // Move/Position handles (arrows)
         Rotation,     // Rotate handles (circles)
-        Scale,        // Scale handles (boxes) - for future implementation
+        Scale,        // Scale handles (boxes)
         None
     }
 }

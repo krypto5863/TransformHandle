@@ -16,6 +16,7 @@ namespace TransformHandle
         private HandleHoverDetector hoverDetector;
         private IDragHandler translationHandler;
         private IDragHandler rotationHandler;
+        private IDragHandler scaleHandler;
         private IDragHandler currentDragHandler;
 
         // Interaction state
@@ -29,6 +30,7 @@ namespace TransformHandle
             hoverDetector      = new HandleHoverDetector(camera);
             translationHandler = new TranslationDragHandler(camera);
             rotationHandler    = new RotationDragHandler(camera);
+            scaleHandler       = new ScaleDragHandler(camera);
         }
 
         public void UpdateTarget(Transform newTarget)
@@ -73,9 +75,20 @@ namespace TransformHandle
             DraggedAxis = HoveredAxis;
 
             // Choose handler
-            currentDragHandler = handleType == HandleType.Translation
-                                 ? translationHandler
-                                 : rotationHandler;
+            switch (handleType)
+            {
+                case HandleType.Translation:
+                    currentDragHandler = translationHandler;
+                    break;
+                case HandleType.Rotation:
+                    currentDragHandler = rotationHandler;
+                    break;
+                case HandleType.Scale:
+                    currentDragHandler = scaleHandler;
+                    break;
+                default:
+                    return;
+            }
 
             // Pass space into StartDrag
             currentDragHandler.StartDrag(target, DraggedAxis, mousePos, handleSpace);

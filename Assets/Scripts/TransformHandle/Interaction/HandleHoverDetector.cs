@@ -33,6 +33,8 @@ namespace TransformHandle
                     return GetClosestTranslationAxis(mousePos, target, handleScale, handleSpace);
                 case HandleType.Rotation:
                     return GetClosestRotationAxis(mousePos, target, handleScale, handleSpace);
+                case HandleType.Scale:
+                    return GetClosestScaleAxis(mousePos, target, handleScale, handleSpace);
                 default:
                     return -1;
             }
@@ -149,6 +151,54 @@ namespace TransformHandle
             }
 
             return minDist;
+        }
+
+        private int GetClosestScaleAxis(Vector2 mousePos, Transform target, float handleScale, HandleSpace handleSpace)
+        {
+            float minDist = float.MaxValue;
+            int axis = -1;
+
+            // Check axis handles (0, 1, 2)
+            for (int i = 0; i < 3; i++)
+            {
+                Vector3 dir = GetAxisDirection(target, i, HandleSpace.Local); // Scale always uses local
+                float dist = GetDistanceToScaleHandle(mousePos, target.position, dir, handleScale);
+                if (dist < minDist && dist < 20f) // Larger threshold for boxes
+                {
+                    minDist = dist;
+                    axis = i;
+                }
+            }
+
+            // Check center handle (index 3)
+            float centerDist = GetDistanceToCenterHandle(mousePos, target.position, handleScale * 0.06f * 1.5f);
+            if (centerDist < minDist && centerDist < 20f)
+            {
+                minDist = centerDist;
+                axis = 3;
+            }
+
+            return axis;
+        }
+
+        private float GetDistanceToScaleHandle(Vector2 mousePos, Vector3 origin, Vector3 direction, float scale)
+        {
+            // Scale handle is a box at the end of the axis
+            Vector3 boxCenter = origin + direction * scale;
+            Vector3 screenPos = mainCamera.WorldToScreenPoint(boxCenter);
+            
+            if (screenPos.z < 0f) return float.MaxValue;
+            
+            // Simple distance to center of box (could be improved with actual box bounds)
+            return Vector2.Distance(mousePos, new Vector2(screenPos.x, screenPos.y));
+        }
+
+        private float GetDistanceToCenterHandle(Vector2 mousePos, Vector3 center, float size)
+        {
+            Vector3 screenPos = mainCamera.WorldToScreenPoint(center);
+            if (screenPos.z < 0f) return float.MaxValue;
+            
+            return Vector2.Distance(mousePos, new Vector2(screenPos.x, screenPos.y));
         }
 
         private float DistancePointToLineSegment(Vector2 p, Vector2 a, Vector2 b)

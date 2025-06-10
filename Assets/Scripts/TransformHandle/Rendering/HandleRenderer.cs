@@ -9,6 +9,7 @@ namespace TransformHandle
     {
         private IHandleRenderer translationRenderer;
         private IHandleRenderer rotationRenderer;
+        private IHandleRenderer scaleRenderer;
         private Material lineMaterial;
 
         public HandleRenderer()
@@ -16,6 +17,7 @@ namespace TransformHandle
             CreateMaterial();
             translationRenderer = new TranslationHandleRenderer();
             rotationRenderer    = new RotationHandleRenderer();
+            scaleRenderer       = new ScaleHandleRenderer();
         }
 
         private void CreateMaterial()
@@ -66,6 +68,7 @@ namespace TransformHandle
             {
                 case HandleType.Translation: return translationRenderer;
                 case HandleType.Rotation:    return rotationRenderer;
+                case HandleType.Scale:       return scaleRenderer;
                 default:                     return null;
             }
         }

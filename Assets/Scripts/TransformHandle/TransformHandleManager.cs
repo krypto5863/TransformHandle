@@ -67,6 +67,14 @@ namespace TransformHandle
         }
 
         /// <summary>
+        /// Sets the handle mode to Scale.
+        /// </summary>
+        public void SetScaleMode()
+        {
+            handleType = HandleType.Scale;
+        }
+
+        /// <summary>
         /// Toggles between Local and Global axis space.
         /// </summary>
         public void ToggleHandleSpace()

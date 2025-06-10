@@ -21,6 +21,11 @@ namespace TransformHandle
         [Tooltip("Invoked when rotationKey is pressed.")]
         public UnityEvent onSetRotation;
 
+        [Tooltip("Key to set Scale mode (scale tool).")]
+        public Key scaleKey = Key.R;
+        [Tooltip("Invoked when scaleKey is pressed.")]
+        public UnityEvent onSetScale;
+
         [Header("Space Key")]
         [Tooltip("Key to toggle between Local and Global axes.")]
         public Key handleSpaceToggleKey = Key.X;
@@ -36,6 +41,9 @@ namespace TransformHandle
 
             if (Keyboard.current[rotationKey].wasPressedThisFrame)
                 onSetRotation?.Invoke();
+
+            if (Keyboard.current[scaleKey].wasPressedThisFrame)
+                onSetScale?.Invoke();
 
             if (Keyboard.current[handleSpaceToggleKey].wasPressedThisFrame)
                 onToggleHandleSpace?.Invoke();
