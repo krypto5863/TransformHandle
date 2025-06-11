@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Interface for different drag handling strategies,

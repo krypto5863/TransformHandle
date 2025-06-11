@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Interface for rendering transform handles with selectable space (Local or Global).

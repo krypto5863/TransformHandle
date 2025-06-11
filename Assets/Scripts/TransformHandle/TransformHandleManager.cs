@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Singleton manager that controls transform handles for any selected object.

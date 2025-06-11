@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Helper class to draw thick lines using GL

@@ -1,4 +1,4 @@
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Defines the type of transform handle to display

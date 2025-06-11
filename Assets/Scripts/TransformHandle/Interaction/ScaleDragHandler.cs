@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Handles the dragging logic for scale operations

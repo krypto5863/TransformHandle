@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Manages rendering of different handle types using GL, always rendered on top.

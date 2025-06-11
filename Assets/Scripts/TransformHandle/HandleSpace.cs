@@ -1,4 +1,4 @@
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Legt fest, ob die Handles in World- oder Local-Space angezeigt werden.

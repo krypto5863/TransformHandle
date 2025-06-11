@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Dispatches key events for setting translation/rotation mode and toggling Local/Global space,

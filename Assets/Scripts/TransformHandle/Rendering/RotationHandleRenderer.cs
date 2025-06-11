@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Renders rotation handles with circles in either Local or Global space.
@@ -25,12 +25,14 @@ namespace TransformHandle
             Vector3 dirY = (handleSpace == HandleSpace.Local) ? target.up      : Vector3.up;
             Vector3 dirZ = (handleSpace == HandleSpace.Local) ? target.forward : Vector3.forward;
 
-            // Y-axis rotation circle
-            DrawRotationCircle(position, dirX, yAxisColor, scale, 1, hoveredAxis, alpha, camera);
-            // Z-axis rotation circle
-            DrawRotationCircle(position, dirY, zAxisColor, scale, 2, hoveredAxis, alpha, camera);
-            // X-axis rotation circle
-            DrawRotationCircle(position, dirZ, xAxisColor, scale, 0, hoveredAxis, alpha, camera);
+            // X-axis rotation circle (rotates around X, so circle is in YZ plane)
+            DrawRotationCircle(position, dirX, xAxisColor, scale, 0, hoveredAxis, alpha, camera);
+            
+            // Y-axis rotation circle (rotates around Y, so circle is in XZ plane)
+            DrawRotationCircle(position, dirY, yAxisColor, scale, 1, hoveredAxis, alpha, camera);
+            
+            // Z-axis rotation circle (rotates around Z, so circle is in XY plane)
+            DrawRotationCircle(position, dirZ, zAxisColor, scale, 2, hoveredAxis, alpha, camera);
 
             // Free rotation sphere
             DrawCameraFacingCircle(position, scale * 1.2f, alpha, camera);

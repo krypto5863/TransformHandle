@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace TransformHandle
+namespace MeshFreeHandles
 {
     /// <summary>
     /// Manages user input and coordinates interaction components,
