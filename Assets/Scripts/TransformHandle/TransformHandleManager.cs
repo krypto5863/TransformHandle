@@ -66,6 +66,8 @@ namespace MeshFreeHandles
         public bool IsActive => targetTransform != null;
         public bool IsDragging => interaction?.IsDragging ?? false;
 
+        public bool IsHovering => interaction?.HoveredAxis >= 0f;
+
         void Awake()
         {
             // Singleton enforcement
