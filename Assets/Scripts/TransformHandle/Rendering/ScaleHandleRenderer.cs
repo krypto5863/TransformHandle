@@ -5,7 +5,7 @@ namespace MeshFreeHandles
     /// <summary>
     /// Renders scale handles with boxes at axis ends and a center handle for uniform scaling
     /// </summary>
-    public class ScaleHandleRenderer : IHandleRenderer
+    public class ScaleHandleRenderer : IProfileAwareRenderer
     {
         private readonly Color xAxisColor = Color.red;
         private readonly Color yAxisColor = Color.green;
@@ -14,15 +14,14 @@ namespace MeshFreeHandles
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
         private readonly float baseThickness = 6f;
-        private readonly float hoverThickness = 9f;
-        private readonly float boxSize = 0.09f; // Relative to handle scale (50% größer)
+        private readonly float hoverThickness = 12f;
+        private readonly float boxSize = 0.09f;
 
         public void Render(Transform target, float scale, int hoveredAxis, float alpha = 1f, HandleSpace handleSpace = HandleSpace.Local)
         {
             Vector3 position = target.position;
 
             // For scale, we always use local axes regardless of handle space setting
-            // This makes more sense for scaling operations
             Vector3 dirX = target.right;
             Vector3 dirY = target.up;
             Vector3 dirZ = target.forward;
@@ -34,6 +33,38 @@ namespace MeshFreeHandles
 
             // Draw center handle for uniform scaling (axis index 3)
             DrawCenterHandle(position, scale * boxSize * 1.5f, hoveredAxis == 3, alpha);
+        }
+
+        public void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile, float alpha = 1f)
+        {
+            Vector3 position = target.position;
+
+            // Render each axis based on profile settings
+            for (int axis = 0; axis < 3; axis++)
+            {
+                Color color = GetAxisColor(axis);
+
+                // Check local space (most common for scale)
+                if (profile.IsAxisEnabled(HandleType.Scale, axis, HandleSpace.Local))
+                {
+                    Vector3 direction = GetLocalAxisDirection(target, axis);
+                    DrawScaleAxis(position, direction, color, scale, axis, hoveredAxis, alpha);
+                }
+
+                // Check global space (less common for scale)
+                if (profile.IsAxisEnabled(HandleType.Scale, axis, HandleSpace.Global))
+                {
+                    Vector3 direction = GetGlobalAxisDirection(axis);
+                    DrawScaleAxis(position, direction, color, scale, axis, hoveredAxis, alpha);
+                }
+            }
+
+            // Uniform scale handle (axis index 3)
+            if (profile.IsAxisEnabled(HandleType.Scale, 3, HandleSpace.Local) || 
+                profile.IsAxisEnabled(HandleType.Scale, 3, HandleSpace.Global))
+            {
+                DrawCenterHandle(position, scale * boxSize * 1.5f, hoveredAxis == 3, alpha);
+            }
         }
 
         private void DrawScaleAxis(Vector3 origin, Vector3 direction, Color color, float length,
@@ -152,6 +183,39 @@ namespace MeshFreeHandles
             GL.Vertex(center - Vector3.up * lineSize); GL.Vertex(center + Vector3.up * lineSize);
             GL.Vertex(center - Vector3.forward * lineSize); GL.Vertex(center + Vector3.forward * lineSize);
             GL.End();
+        }
+
+        private Vector3 GetLocalAxisDirection(Transform target, int axis)
+        {
+            switch (axis)
+            {
+                case 0: return target.right;
+                case 1: return target.up;
+                case 2: return target.forward;
+                default: return Vector3.zero;
+            }
+        }
+
+        private Vector3 GetGlobalAxisDirection(int axis)
+        {
+            switch (axis)
+            {
+                case 0: return Vector3.right;
+                case 1: return Vector3.up;
+                case 2: return Vector3.forward;
+                default: return Vector3.zero;
+            }
+        }
+
+        private Color GetAxisColor(int axis)
+        {
+            switch (axis)
+            {
+                case 0: return Color.red;
+                case 1: return Color.green;
+                case 2: return Color.blue;
+                default: return Color.white;
+            }
         }
     }
 }

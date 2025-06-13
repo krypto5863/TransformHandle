@@ -5,7 +5,7 @@ namespace MeshFreeHandles
     /// <summary>
     /// Renders translation (movement) handles with arrows in either Local or Global space.
     /// </summary>
-    public class TranslationHandleRenderer : IHandleRenderer
+    public class TranslationHandleRenderer : IProfileAwareRenderer
     {
         private readonly Color xAxisColor = Color.red;
         private readonly Color yAxisColor = Color.green;
@@ -13,7 +13,7 @@ namespace MeshFreeHandles
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
         private readonly float baseThickness = 6f;
-        private readonly float hoverThickness = 9f;
+        private readonly float hoverThickness = 12f;
 
         public void Render(Transform target, float scale, int hoveredAxis, float alpha = 1f, HandleSpace handleSpace = HandleSpace.Local)
         {
@@ -27,6 +27,34 @@ namespace MeshFreeHandles
             DrawAxis(position, dirY, yAxisColor, scale, 1, hoveredAxis, alpha);
             DrawAxis(position, dirZ, zAxisColor, scale, 2, hoveredAxis, alpha);
 
+            DrawCenterPoint(position, scale * 0.1f, alpha);
+        }
+
+        public void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile, float alpha = 1f)
+        {
+            Vector3 position = target.position;
+
+            // Render each axis based on profile settings
+            for (int axis = 0; axis < 3; axis++)
+            {
+                Color color = GetAxisColor(axis);
+
+                // Check local space
+                if (profile.IsAxisEnabled(HandleType.Translation, axis, HandleSpace.Local))
+                {
+                    Vector3 direction = GetLocalAxisDirection(target, axis);
+                    DrawAxis(position, direction, color, scale, axis, hoveredAxis, alpha);
+                }
+
+                // Check global space
+                if (profile.IsAxisEnabled(HandleType.Translation, axis, HandleSpace.Global))
+                {
+                    Vector3 direction = GetGlobalAxisDirection(axis);
+                    DrawAxis(position, direction, color, scale, axis, hoveredAxis, alpha);
+                }
+            }
+
+            // Always draw center point
             DrawCenterPoint(position, scale * 0.1f, alpha);
         }
 
@@ -102,6 +130,39 @@ namespace MeshFreeHandles
             GL.Vertex(center + Vector3.up * size);    GL.Vertex(center - Vector3.up * size);
             GL.Vertex(center + Vector3.forward * size); GL.Vertex(center - Vector3.forward * size);
             GL.End();
+        }
+
+        private Vector3 GetLocalAxisDirection(Transform target, int axis)
+        {
+            switch (axis)
+            {
+                case 0: return target.right;
+                case 1: return target.up;
+                case 2: return target.forward;
+                default: return Vector3.zero;
+            }
+        }
+
+        private Vector3 GetGlobalAxisDirection(int axis)
+        {
+            switch (axis)
+            {
+                case 0: return Vector3.right;
+                case 1: return Vector3.up;
+                case 2: return Vector3.forward;
+                default: return Vector3.zero;
+            }
+        }
+
+        private Color GetAxisColor(int axis)
+        {
+            switch (axis)
+            {
+                case 0: return Color.red;
+                case 1: return Color.green;
+                case 2: return Color.blue;
+                default: return Color.white;
+            }
         }
     }
 }
