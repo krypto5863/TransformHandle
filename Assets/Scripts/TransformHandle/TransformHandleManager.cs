@@ -44,10 +44,6 @@ namespace MeshFreeHandles
         [Tooltip("Multiplier applied when maintaining constant screen size.")]
         public float screenSizeMultiplier = 0.1f;
 
-        [Header("Profile Settings")]
-        [Tooltip("Default profile used when target has no HandleProfileHolder")]
-        [SerializeField] private HandleProfile defaultProfile;
-
         [Header("State")]
         [SerializeField] private HandleType handleType = HandleType.Translation;
         [SerializeField] private HandleSpace handleSpace = HandleSpace.Local;

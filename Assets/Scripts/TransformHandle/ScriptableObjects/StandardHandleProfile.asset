@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f57193f7e13d8c4da9cd6c840ff39ce, type: 3}
   m_Name: StandardHandleProfile
   m_EditorClassIdentifier: 
-  showTranslationLocalX: 1
-  showTranslationLocalY: 1
-  showTranslationLocalZ: 1
-  showTranslationGlobalX: 0
+  showTranslationLocalX: 0
+  showTranslationLocalY: 0
+  showTranslationLocalZ: 0
+  showTranslationGlobalX: 1
   showTranslationGlobalY: 0
-  showTranslationGlobalZ: 0
+  showTranslationGlobalZ: 1
   showRotationLocalX: 1
   showRotationLocalY: 0
-  showRotationLocalZ: 1
+  showRotationLocalZ: 0
   showRotationGlobalX: 0
   showRotationGlobalY: 1
   showRotationGlobalZ: 0
-  showScaleLocalX: 1
-  showScaleLocalY: 1
-  showScaleLocalZ: 1
+  showScaleLocalX: 0
+  showScaleLocalY: 0
+  showScaleLocalZ: 0
   showScaleGlobalX: 0
   showScaleGlobalY: 0
   showScaleGlobalZ: 0
