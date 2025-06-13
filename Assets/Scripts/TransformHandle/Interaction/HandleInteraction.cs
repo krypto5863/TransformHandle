@@ -181,9 +181,20 @@ namespace MeshFreeHandles
             bool hasGlobal = profile.IsAxisEnabled(handleType, axis, HandleSpace.Global);
             
             // If both are enabled, we need a priority system
-            // For now, prefer local space if both are enabled
-            if (hasLocal) return HandleSpace.Local;
-            if (hasGlobal) return HandleSpace.Global;
+            // For planes (axis 4-6), we might want different logic
+            if (axis >= 4 && axis <= 6)
+            {
+                // For planes, prefer the space that has both component axes enabled
+                // This is a simplified approach - you might want more sophisticated logic
+                if (hasLocal) return HandleSpace.Local;
+                if (hasGlobal) return HandleSpace.Global;
+            }
+            else
+            {
+                // For regular axes, prefer local space if both are enabled
+                if (hasLocal) return HandleSpace.Local;
+                if (hasGlobal) return HandleSpace.Global;
+            }
             
             return HandleSpace.Local; // Fallback
         }

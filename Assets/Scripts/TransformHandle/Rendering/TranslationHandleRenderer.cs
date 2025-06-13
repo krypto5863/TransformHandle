@@ -10,6 +10,9 @@ namespace MeshFreeHandles
         private readonly Color xAxisColor = Color.red;
         private readonly Color yAxisColor = Color.green;
         private readonly Color zAxisColor = Color.blue;
+        private readonly float planeAlpha = 0.1f;         // Transparent when not hovered
+        private readonly float planeHoverAlpha = 0.3f;    // More opaque when hovered
+        private readonly float planeSize = 0.15f;         // 15% of axis length (half of 30%)
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
         private readonly float baseThickness = 6f;
@@ -23,6 +26,10 @@ namespace MeshFreeHandles
             Vector3 dirY = (handleSpace == HandleSpace.Local) ? target.up      : Vector3.up;
             Vector3 dirZ = (handleSpace == HandleSpace.Local) ? target.forward : Vector3.forward;
 
+            // Render planes FIRST (behind axes)
+            DrawTranslationPlanes(position, dirX, dirY, dirZ, scale, hoveredAxis, alpha);
+
+            // Then render axes (on top)
             DrawAxis(position, dirX, xAxisColor, scale, 0, hoveredAxis, alpha);
             DrawAxis(position, dirY, yAxisColor, scale, 1, hoveredAxis, alpha);
             DrawAxis(position, dirZ, zAxisColor, scale, 2, hoveredAxis, alpha);
@@ -34,7 +41,10 @@ namespace MeshFreeHandles
         {
             Vector3 position = target.position;
 
-            // Render each axis based on profile settings
+            // First render planes (behind)
+            RenderPlanesWithProfile(target, position, scale, hoveredAxis, profile, alpha);
+
+            // Then render axes (on top)
             for (int axis = 0; axis < 3; axis++)
             {
                 Color color = GetAxisColor(axis);
@@ -120,6 +130,116 @@ namespace MeshFreeHandles
             GL.Vertex(basePoints[3]); GL.Vertex(basePoints[2]);
             GL.Vertex(basePoints[2]); GL.Vertex(basePoints[0]);
             GL.End();
+        }
+
+        private void DrawTranslationPlanes(Vector3 center, Vector3 dirX, Vector3 dirY, Vector3 dirZ, 
+                                         float scale, int hoveredAxis, float alpha)
+        {
+            float size = scale * planeSize;
+
+            // XY Plane (Z stays constant) - axis 4 - Blue color (Z axis)
+            Vector3 offsetXY = (dirX + dirY) * size;
+            DrawPlane(center + offsetXY, dirX, dirY, zAxisColor, size, 4, hoveredAxis, alpha);
+
+            // XZ Plane (Y stays constant) - axis 5 - Green color (Y axis)
+            Vector3 offsetXZ = (dirX + dirZ) * size;
+            DrawPlane(center + offsetXZ, dirX, dirZ, yAxisColor, size, 5, hoveredAxis, alpha);
+
+            // YZ Plane (X stays constant) - axis 6 - Red color (X axis)
+            Vector3 offsetYZ = (dirY + dirZ) * size;
+            DrawPlane(center + offsetYZ, dirY, dirZ, xAxisColor, size, 6, hoveredAxis, alpha);
+        }
+
+        private void RenderPlanesWithProfile(Transform target, Vector3 position, float scale, 
+                                           int hoveredAxis, HandleProfile profile, float alpha)
+        {
+            float size = scale * planeSize;
+
+            // XY Plane (axis 4) - Blue (Z axis color)
+            if (profile.IsAxisEnabled(HandleType.Translation, 4, HandleSpace.Local))
+            {
+                Vector3 dirX = GetLocalAxisDirection(target, 0);
+                Vector3 dirY = GetLocalAxisDirection(target, 1);
+                Vector3 offset = (dirX + dirY) * size;
+                DrawPlane(position + offset, dirX, dirY, zAxisColor, size, 4, hoveredAxis, alpha);
+            }
+            if (profile.IsAxisEnabled(HandleType.Translation, 4, HandleSpace.Global))
+            {
+                Vector3 offset = (Vector3.right + Vector3.up) * size;
+                DrawPlane(position + offset, Vector3.right, Vector3.up, zAxisColor, size, 4, hoveredAxis, alpha);
+            }
+
+            // XZ Plane (axis 5) - Green (Y axis color)
+            if (profile.IsAxisEnabled(HandleType.Translation, 5, HandleSpace.Local))
+            {
+                Vector3 dirX = GetLocalAxisDirection(target, 0);
+                Vector3 dirZ = GetLocalAxisDirection(target, 2);
+                Vector3 offset = (dirX + dirZ) * size;
+                DrawPlane(position + offset, dirX, dirZ, yAxisColor, size, 5, hoveredAxis, alpha);
+            }
+            if (profile.IsAxisEnabled(HandleType.Translation, 5, HandleSpace.Global))
+            {
+                Vector3 offset = (Vector3.right + Vector3.forward) * size;
+                DrawPlane(position + offset, Vector3.right, Vector3.forward, yAxisColor, size, 5, hoveredAxis, alpha);
+            }
+
+            // YZ Plane (axis 6) - Red (X axis color)
+            if (profile.IsAxisEnabled(HandleType.Translation, 6, HandleSpace.Local))
+            {
+                Vector3 dirY = GetLocalAxisDirection(target, 1);
+                Vector3 dirZ = GetLocalAxisDirection(target, 2);
+                Vector3 offset = (dirY + dirZ) * size;
+                DrawPlane(position + offset, dirY, dirZ, xAxisColor, size, 6, hoveredAxis, alpha);
+            }
+            if (profile.IsAxisEnabled(HandleType.Translation, 6, HandleSpace.Global))
+            {
+                Vector3 offset = (Vector3.up + Vector3.forward) * size;
+                DrawPlane(position + offset, Vector3.up, Vector3.forward, xAxisColor, size, 6, hoveredAxis, alpha);
+            }
+        }
+
+        private void DrawPlane(Vector3 center, Vector3 axis1, Vector3 axis2, Color color, 
+                             float size, int planeIndex, int hoveredAxis, float alphaMultiplier)
+        {
+            bool isHovered = (hoveredAxis == planeIndex);
+            float alpha = isHovered ? planeHoverAlpha : planeAlpha;
+            alpha *= alphaMultiplier;
+
+            Color fillColor = new Color(color.r, color.g, color.b, alpha);
+            Color outlineColor = new Color(color.r, color.g, color.b, alpha * 2f); // Outline more visible
+
+            // Calculate corners - plane is already offset, so corners are relative to center
+            Vector3[] corners = new Vector3[4];
+            corners[0] = center;
+            corners[1] = center - axis1 * size;
+            corners[2] = center - axis1 * size - axis2 * size;
+            corners[3] = center - axis2 * size;
+
+            // Fill
+            GL.Begin(GL.QUADS);
+            GL.Color(fillColor);
+            GL.Vertex(corners[0]);
+            GL.Vertex(corners[1]);
+            GL.Vertex(corners[2]);
+            GL.Vertex(corners[3]);
+            GL.End();
+
+            // Outline
+            GL.Begin(GL.LINES);
+            GL.Color(outlineColor);
+            GL.Vertex(corners[0]); GL.Vertex(corners[1]);
+            GL.Vertex(corners[1]); GL.Vertex(corners[2]);
+            GL.Vertex(corners[2]); GL.Vertex(corners[3]);
+            GL.Vertex(corners[3]); GL.Vertex(corners[0]);
+            GL.End();
+        }
+
+        private Color GetPlaneColor(int axis1, int axis2)
+        {
+            // Mix colors of the two axes
+            Color c1 = GetAxisColor(axis1);
+            Color c2 = GetAxisColor(axis2);
+            return (c1 + c2) * 0.5f;
         }
 
         private void DrawCenterPoint(Vector3 center, float size, float alpha)

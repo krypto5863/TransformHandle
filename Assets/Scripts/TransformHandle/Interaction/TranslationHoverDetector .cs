@@ -14,6 +14,7 @@ namespace MeshFreeHandles
             float minDist = float.MaxValue;
             int axis = -1;
 
+            // Check regular axes first (0-2)
             for (int i = 0; i < 3; i++)
             {
                 Vector3 dir = GetAxisDirection(target, i, handleSpace);
@@ -24,6 +25,36 @@ namespace MeshFreeHandles
                     minDist = dist;
                     axis = i;
                 }
+            }
+
+            // Check plane handles (4-6)
+            float planeDist;
+            
+            // XY Plane
+            Vector3 dirX = GetAxisDirection(target, 0, handleSpace);
+            Vector3 dirY = GetAxisDirection(target, 1, handleSpace);
+            planeDist = GetDistanceToPlane(mousePos, target.position, dirX, dirY, handleScale * 0.3f);
+            if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+            {
+                minDist = planeDist;
+                axis = 4;
+            }
+
+            // XZ Plane
+            Vector3 dirZ = GetAxisDirection(target, 2, handleSpace);
+            planeDist = GetDistanceToPlane(mousePos, target.position, dirX, dirZ, handleScale * 0.3f);
+            if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+            {
+                minDist = planeDist;
+                axis = 5;
+            }
+
+            // YZ Plane
+            planeDist = GetDistanceToPlane(mousePos, target.position, dirY, dirZ, handleScale * 0.3f);
+            if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+            {
+                minDist = planeDist;
+                axis = 6;
             }
 
             return axis;
@@ -59,7 +90,83 @@ namespace MeshFreeHandles
                 }
             }
 
+            // Check plane handles
+            CheckPlanesWithProfile(mousePos, target, handleScale, profile, ref minDist, ref axis);
+
             return axis;
+        }
+
+        private void CheckPlanesWithProfile(Vector2 mousePos, Transform target, float handleScale, 
+                                           HandleProfile profile, ref float minDist, ref int axis)
+        {
+            float planeSize = handleScale * 0.3f;
+            float planeDist;
+
+            // XY Plane (axis 4)
+            if (profile.IsAxisEnabled(HandleType.Translation, 4, HandleSpace.Local))
+            {
+                Vector3 dirX = GetAxisDirection(target, 0, HandleSpace.Local);
+                Vector3 dirY = GetAxisDirection(target, 1, HandleSpace.Local);
+                planeDist = GetDistanceToPlane(mousePos, target.position, dirX, dirY, planeSize);
+                if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+                {
+                    minDist = planeDist;
+                    axis = 4;
+                }
+            }
+            if (profile.IsAxisEnabled(HandleType.Translation, 4, HandleSpace.Global))
+            {
+                planeDist = GetDistanceToPlane(mousePos, target.position, Vector3.right, Vector3.up, planeSize);
+                if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+                {
+                    minDist = planeDist;
+                    axis = 4;
+                }
+            }
+
+            // XZ Plane (axis 5)
+            if (profile.IsAxisEnabled(HandleType.Translation, 5, HandleSpace.Local))
+            {
+                Vector3 dirX = GetAxisDirection(target, 0, HandleSpace.Local);
+                Vector3 dirZ = GetAxisDirection(target, 2, HandleSpace.Local);
+                planeDist = GetDistanceToPlane(mousePos, target.position, dirX, dirZ, planeSize);
+                if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+                {
+                    minDist = planeDist;
+                    axis = 5;
+                }
+            }
+            if (profile.IsAxisEnabled(HandleType.Translation, 5, HandleSpace.Global))
+            {
+                planeDist = GetDistanceToPlane(mousePos, target.position, Vector3.right, Vector3.forward, planeSize);
+                if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+                {
+                    minDist = planeDist;
+                    axis = 5;
+                }
+            }
+
+            // YZ Plane (axis 6)
+            if (profile.IsAxisEnabled(HandleType.Translation, 6, HandleSpace.Local))
+            {
+                Vector3 dirY = GetAxisDirection(target, 1, HandleSpace.Local);
+                Vector3 dirZ = GetAxisDirection(target, 2, HandleSpace.Local);
+                planeDist = GetDistanceToPlane(mousePos, target.position, dirY, dirZ, planeSize);
+                if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+                {
+                    minDist = planeDist;
+                    axis = 6;
+                }
+            }
+            if (profile.IsAxisEnabled(HandleType.Translation, 6, HandleSpace.Global))
+            {
+                planeDist = GetDistanceToPlane(mousePos, target.position, Vector3.up, Vector3.forward, planeSize);
+                if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
+                {
+                    minDist = planeDist;
+                    axis = 6;
+                }
+            }
         }
 
         private float GetDistanceToAxisInSpace(Vector2 mousePos, Transform target, int axisIndex, float scale, HandleSpace space)
@@ -83,6 +190,67 @@ namespace MeshFreeHandles
                 new Vector2(originScreen.x, originScreen.y), 
                 new Vector2(endScreen.x, endScreen.y)
             );
+        }
+
+        private float GetDistanceToPlane(Vector2 mousePos, Vector3 center, Vector3 axis1, Vector3 axis2, float size)
+        {
+            // Calculate plane corners
+            Vector3[] corners = new Vector3[4];
+            corners[0] = center + (axis1 + axis2) * size;
+            corners[1] = center + (axis1 - axis2) * size;
+            corners[2] = center + (-axis1 - axis2) * size;
+            corners[3] = center + (-axis1 + axis2) * size;
+
+            // Check if any corner is behind camera
+            for (int i = 0; i < 4; i++)
+            {
+                if (IsPointBehindCamera(corners[i]))
+                    return float.MaxValue;
+            }
+
+            // Convert to screen space
+            Vector2[] screenCorners = new Vector2[4];
+            for (int i = 0; i < 4; i++)
+            {
+                Vector3 screenPos = mainCamera.WorldToScreenPoint(corners[i]);
+                screenCorners[i] = new Vector2(screenPos.x, screenPos.y);
+            }
+
+            // Point in polygon test
+            if (IsPointInQuad(mousePos, screenCorners))
+            {
+                return 0f; // Inside the plane
+            }
+
+            // Otherwise, distance to edges
+            float minDist = float.MaxValue;
+            for (int i = 0; i < 4; i++)
+            {
+                int next = (i + 1) % 4;
+                float dist = DistancePointToLineSegment(mousePos, screenCorners[i], screenCorners[next]);
+                minDist = Mathf.Min(minDist, dist);
+            }
+
+            return minDist;
+        }
+
+        private bool IsPointInQuad(Vector2 point, Vector2[] quad)
+        {
+            // Simple point-in-polygon test using cross products
+            bool sign = false;
+            for (int i = 0; i < 4; i++)
+            {
+                int next = (i + 1) % 4;
+                Vector2 edge = quad[next] - quad[i];
+                Vector2 toPoint = point - quad[i];
+                float cross = edge.x * toPoint.y - edge.y * toPoint.x;
+                
+                if (i == 0)
+                    sign = cross > 0;
+                else if ((cross > 0) != sign)
+                    return false;
+            }
+            return true;
         }
     }
 }

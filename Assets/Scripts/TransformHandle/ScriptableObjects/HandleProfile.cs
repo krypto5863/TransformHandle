@@ -16,6 +16,14 @@ namespace MeshFreeHandles
         [SerializeField] private bool showTranslationGlobalY = false;
         [SerializeField] private bool showTranslationGlobalZ = false;
 
+        [Header("Translation Plane Handles")]
+        [SerializeField] private bool showTranslationLocalXY = false;
+        [SerializeField] private bool showTranslationLocalXZ = false;
+        [SerializeField] private bool showTranslationLocalYZ = false;
+        [SerializeField] private bool showTranslationGlobalXY = false;
+        [SerializeField] private bool showTranslationGlobalXZ = false;
+        [SerializeField] private bool showTranslationGlobalYZ = false;
+
         [Header("Rotation Handles")]
         [SerializeField] private bool showRotationLocalX = true;
         [SerializeField] private bool showRotationLocalY = false;
@@ -48,6 +56,9 @@ namespace MeshFreeHandles
                             case 0: return showTranslationLocalX;
                             case 1: return showTranslationLocalY;
                             case 2: return showTranslationLocalZ;
+                            case 4: return showTranslationLocalXY;  // XY Plane
+                            case 5: return showTranslationLocalXZ;  // XZ Plane
+                            case 6: return showTranslationLocalYZ;  // YZ Plane
                         }
                     }
                     else // Global
@@ -57,6 +68,9 @@ namespace MeshFreeHandles
                             case 0: return showTranslationGlobalX;
                             case 1: return showTranslationGlobalY;
                             case 2: return showTranslationGlobalZ;
+                            case 4: return showTranslationGlobalXY;  // XY Plane
+                            case 5: return showTranslationGlobalXZ;  // XZ Plane
+                            case 6: return showTranslationGlobalYZ;  // YZ Plane
                         }
                     }
                     break;
@@ -117,7 +131,9 @@ namespace MeshFreeHandles
             {
                 case HandleType.Translation:
                     return showTranslationLocalX || showTranslationLocalY || showTranslationLocalZ ||
-                           showTranslationGlobalX || showTranslationGlobalY || showTranslationGlobalZ;
+                           showTranslationGlobalX || showTranslationGlobalY || showTranslationGlobalZ ||
+                           showTranslationLocalXY || showTranslationLocalXZ || showTranslationLocalYZ ||
+                           showTranslationGlobalXY || showTranslationGlobalXZ || showTranslationGlobalYZ;
 
                 case HandleType.Rotation:
                     return showRotationLocalX || showRotationLocalY || showRotationLocalZ ||
