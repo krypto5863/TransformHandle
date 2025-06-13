@@ -7,14 +7,22 @@ namespace MeshFreeHandles
     /// </summary>
     public class TranslationHandleRenderer : IProfileAwareRenderer
     {
+        // Public constants
+        public const float PLANE_SIZE_MULTIPLIER = 0.3f;
+
+        // Colors
         private readonly Color xAxisColor = Color.red;
         private readonly Color yAxisColor = Color.green;
         private readonly Color zAxisColor = Color.blue;
+        
+        // Alpha values
         private readonly float planeAlpha = 0.1f;         // Transparent when not hovered
         private readonly float planeHoverAlpha = 0.3f;    // More opaque when hovered
-        private readonly float planeSize = 0.15f;         // 15% of axis length (half of 30%)
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
+        
+        // Sizes
+        private readonly float planeSize = PLANE_SIZE_MULTIPLIER;
         private readonly float baseThickness = 6f;
         private readonly float hoverThickness = 12f;
 
@@ -136,17 +144,31 @@ namespace MeshFreeHandles
                                          float scale, int hoveredAxis, float alpha)
         {
             float size = scale * planeSize;
+            Camera cam = Camera.main;
+            Vector3 camForward = cam.transform.forward;
 
             // XY Plane (Z stays constant) - axis 4 - Blue color (Z axis)
-            Vector3 offsetXY = (dirX + dirY) * size;
+            float dotX_XY = Vector3.Dot(dirX, -camForward);
+            float dotY_XY = Vector3.Dot(dirY, -camForward);
+            Vector3 offsetXY = Vector3.zero;
+            if (dotX_XY > 0) offsetXY += dirX * size;
+            if (dotY_XY > 0) offsetXY += dirY * size;
             DrawPlane(center + offsetXY, dirX, dirY, zAxisColor, size, 4, hoveredAxis, alpha);
 
             // XZ Plane (Y stays constant) - axis 5 - Green color (Y axis)
-            Vector3 offsetXZ = (dirX + dirZ) * size;
+            float dotX_XZ = Vector3.Dot(dirX, -camForward);
+            float dotZ_XZ = Vector3.Dot(dirZ, -camForward);
+            Vector3 offsetXZ = Vector3.zero;
+            if (dotX_XZ > 0) offsetXZ += dirX * size;
+            if (dotZ_XZ > 0) offsetXZ += dirZ * size;
             DrawPlane(center + offsetXZ, dirX, dirZ, yAxisColor, size, 5, hoveredAxis, alpha);
 
             // YZ Plane (X stays constant) - axis 6 - Red color (X axis)
-            Vector3 offsetYZ = (dirY + dirZ) * size;
+            float dotY_YZ = Vector3.Dot(dirY, -camForward);
+            float dotZ_YZ = Vector3.Dot(dirZ, -camForward);
+            Vector3 offsetYZ = Vector3.zero;
+            if (dotY_YZ > 0) offsetYZ += dirY * size;
+            if (dotZ_YZ > 0) offsetYZ += dirZ * size;
             DrawPlane(center + offsetYZ, dirY, dirZ, xAxisColor, size, 6, hoveredAxis, alpha);
         }
 
@@ -154,18 +176,20 @@ namespace MeshFreeHandles
                                            int hoveredAxis, HandleProfile profile, float alpha)
         {
             float size = scale * planeSize;
+            Camera cam = Camera.main;
+            Vector3 camForward = cam.transform.forward;
 
             // XY Plane (axis 4) - Blue (Z axis color)
             if (profile.IsAxisEnabled(HandleType.Translation, 4, HandleSpace.Local))
             {
                 Vector3 dirX = GetLocalAxisDirection(target, 0);
                 Vector3 dirY = GetLocalAxisDirection(target, 1);
-                Vector3 offset = (dirX + dirY) * size;
+                Vector3 offset = CalculatePlaneOffset(dirX, dirY, size, camForward);
                 DrawPlane(position + offset, dirX, dirY, zAxisColor, size, 4, hoveredAxis, alpha);
             }
             if (profile.IsAxisEnabled(HandleType.Translation, 4, HandleSpace.Global))
             {
-                Vector3 offset = (Vector3.right + Vector3.up) * size;
+                Vector3 offset = CalculatePlaneOffset(Vector3.right, Vector3.up, size, camForward);
                 DrawPlane(position + offset, Vector3.right, Vector3.up, zAxisColor, size, 4, hoveredAxis, alpha);
             }
 
@@ -174,12 +198,12 @@ namespace MeshFreeHandles
             {
                 Vector3 dirX = GetLocalAxisDirection(target, 0);
                 Vector3 dirZ = GetLocalAxisDirection(target, 2);
-                Vector3 offset = (dirX + dirZ) * size;
+                Vector3 offset = CalculatePlaneOffset(dirX, dirZ, size, camForward);
                 DrawPlane(position + offset, dirX, dirZ, yAxisColor, size, 5, hoveredAxis, alpha);
             }
             if (profile.IsAxisEnabled(HandleType.Translation, 5, HandleSpace.Global))
             {
-                Vector3 offset = (Vector3.right + Vector3.forward) * size;
+                Vector3 offset = CalculatePlaneOffset(Vector3.right, Vector3.forward, size, camForward);
                 DrawPlane(position + offset, Vector3.right, Vector3.forward, yAxisColor, size, 5, hoveredAxis, alpha);
             }
 
@@ -188,14 +212,29 @@ namespace MeshFreeHandles
             {
                 Vector3 dirY = GetLocalAxisDirection(target, 1);
                 Vector3 dirZ = GetLocalAxisDirection(target, 2);
-                Vector3 offset = (dirY + dirZ) * size;
+                Vector3 offset = CalculatePlaneOffset(dirY, dirZ, size, camForward);
                 DrawPlane(position + offset, dirY, dirZ, xAxisColor, size, 6, hoveredAxis, alpha);
             }
             if (profile.IsAxisEnabled(HandleType.Translation, 6, HandleSpace.Global))
             {
-                Vector3 offset = (Vector3.up + Vector3.forward) * size;
+                Vector3 offset = CalculatePlaneOffset(Vector3.up, Vector3.forward, size, camForward);
                 DrawPlane(position + offset, Vector3.up, Vector3.forward, xAxisColor, size, 6, hoveredAxis, alpha);
             }
+        }
+
+        private Vector3 CalculatePlaneOffset(Vector3 axis1, Vector3 axis2, float size, Vector3 camForward)
+        {
+            Vector3 offset = Vector3.zero;
+            
+            // Check if axis1 points towards camera
+            if (Vector3.Dot(axis1, -camForward) > 0)
+                offset += axis1 * size;
+                
+            // Check if axis2 points towards camera
+            if (Vector3.Dot(axis2, -camForward) > 0)
+                offset += axis2 * size;
+                
+            return offset;
         }
 
         private void DrawPlane(Vector3 center, Vector3 axis1, Vector3 axis2, Color color, 
@@ -273,6 +312,7 @@ namespace MeshFreeHandles
                 default: return Vector3.zero;
             }
         }
+
 
         private Color GetAxisColor(int axis)
         {

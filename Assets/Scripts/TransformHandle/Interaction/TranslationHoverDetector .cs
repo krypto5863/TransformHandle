@@ -29,11 +29,15 @@ namespace MeshFreeHandles
 
             // Check plane handles (4-6)
             float planeDist;
+            float planeScale = handleScale * TranslationHandleRenderer.PLANE_SIZE_MULTIPLIER;
+            Camera cam = Camera.main;
+            Vector3 camForward = cam.transform.forward;
             
             // XY Plane
             Vector3 dirX = GetAxisDirection(target, 0, handleSpace);
             Vector3 dirY = GetAxisDirection(target, 1, handleSpace);
-            planeDist = GetDistanceToPlane(mousePos, target.position, dirX, dirY, handleScale * 0.3f);
+            Vector3 offsetXY = CalculatePlaneOffset(dirX, dirY, planeScale, camForward);
+            planeDist = GetDistanceToPlane(mousePos, target.position + offsetXY, dirX, dirY, planeScale);
             if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
             {
                 minDist = planeDist;
@@ -42,7 +46,8 @@ namespace MeshFreeHandles
 
             // XZ Plane
             Vector3 dirZ = GetAxisDirection(target, 2, handleSpace);
-            planeDist = GetDistanceToPlane(mousePos, target.position, dirX, dirZ, handleScale * 0.3f);
+            Vector3 offsetXZ = CalculatePlaneOffset(dirX, dirZ, planeScale, camForward);
+            planeDist = GetDistanceToPlane(mousePos, target.position + offsetXZ, dirX, dirZ, planeScale);
             if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
             {
                 minDist = planeDist;
@@ -50,7 +55,8 @@ namespace MeshFreeHandles
             }
 
             // YZ Plane
-            planeDist = GetDistanceToPlane(mousePos, target.position, dirY, dirZ, handleScale * 0.3f);
+            Vector3 offsetYZ = CalculatePlaneOffset(dirY, dirZ, planeScale, camForward);
+            planeDist = GetDistanceToPlane(mousePos, target.position + offsetYZ, dirY, dirZ, planeScale);
             if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
             {
                 minDist = planeDist;
@@ -99,15 +105,18 @@ namespace MeshFreeHandles
         private void CheckPlanesWithProfile(Vector2 mousePos, Transform target, float handleScale, 
                                            HandleProfile profile, ref float minDist, ref int axis)
         {
-            float planeSize = handleScale * 0.3f;
+            float planeSize = handleScale * TranslationHandleRenderer.PLANE_SIZE_MULTIPLIER;
             float planeDist;
+            Camera cam = Camera.main;
+            Vector3 camForward = cam.transform.forward;
 
             // XY Plane (axis 4)
             if (profile.IsAxisEnabled(HandleType.Translation, 4, HandleSpace.Local))
             {
                 Vector3 dirX = GetAxisDirection(target, 0, HandleSpace.Local);
                 Vector3 dirY = GetAxisDirection(target, 1, HandleSpace.Local);
-                planeDist = GetDistanceToPlane(mousePos, target.position, dirX, dirY, planeSize);
+                Vector3 offset = CalculatePlaneOffset(dirX, dirY, planeSize, camForward);
+                planeDist = GetDistanceToPlane(mousePos, target.position + offset, dirX, dirY, planeSize);
                 if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
                 {
                     minDist = planeDist;
@@ -116,7 +125,8 @@ namespace MeshFreeHandles
             }
             if (profile.IsAxisEnabled(HandleType.Translation, 4, HandleSpace.Global))
             {
-                planeDist = GetDistanceToPlane(mousePos, target.position, Vector3.right, Vector3.up, planeSize);
+                Vector3 offset = CalculatePlaneOffset(Vector3.right, Vector3.up, planeSize, camForward);
+                planeDist = GetDistanceToPlane(mousePos, target.position + offset, Vector3.right, Vector3.up, planeSize);
                 if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
                 {
                     minDist = planeDist;
@@ -129,7 +139,8 @@ namespace MeshFreeHandles
             {
                 Vector3 dirX = GetAxisDirection(target, 0, HandleSpace.Local);
                 Vector3 dirZ = GetAxisDirection(target, 2, HandleSpace.Local);
-                planeDist = GetDistanceToPlane(mousePos, target.position, dirX, dirZ, planeSize);
+                Vector3 offset = CalculatePlaneOffset(dirX, dirZ, planeSize, camForward);
+                planeDist = GetDistanceToPlane(mousePos, target.position + offset, dirX, dirZ, planeSize);
                 if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
                 {
                     minDist = planeDist;
@@ -138,7 +149,8 @@ namespace MeshFreeHandles
             }
             if (profile.IsAxisEnabled(HandleType.Translation, 5, HandleSpace.Global))
             {
-                planeDist = GetDistanceToPlane(mousePos, target.position, Vector3.right, Vector3.forward, planeSize);
+                Vector3 offset = CalculatePlaneOffset(Vector3.right, Vector3.forward, planeSize, camForward);
+                planeDist = GetDistanceToPlane(mousePos, target.position + offset, Vector3.right, Vector3.forward, planeSize);
                 if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
                 {
                     minDist = planeDist;
@@ -151,7 +163,8 @@ namespace MeshFreeHandles
             {
                 Vector3 dirY = GetAxisDirection(target, 1, HandleSpace.Local);
                 Vector3 dirZ = GetAxisDirection(target, 2, HandleSpace.Local);
-                planeDist = GetDistanceToPlane(mousePos, target.position, dirY, dirZ, planeSize);
+                Vector3 offset = CalculatePlaneOffset(dirY, dirZ, planeSize, camForward);
+                planeDist = GetDistanceToPlane(mousePos, target.position + offset, dirY, dirZ, planeSize);
                 if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
                 {
                     minDist = planeDist;
@@ -160,7 +173,8 @@ namespace MeshFreeHandles
             }
             if (profile.IsAxisEnabled(HandleType.Translation, 6, HandleSpace.Global))
             {
-                planeDist = GetDistanceToPlane(mousePos, target.position, Vector3.up, Vector3.forward, planeSize);
+                Vector3 offset = CalculatePlaneOffset(Vector3.up, Vector3.forward, planeSize, camForward);
+                planeDist = GetDistanceToPlane(mousePos, target.position + offset, Vector3.up, Vector3.forward, planeSize);
                 if (planeDist < minDist && planeDist < TRANSLATION_THRESHOLD)
                 {
                     minDist = planeDist;
@@ -194,12 +208,12 @@ namespace MeshFreeHandles
 
         private float GetDistanceToPlane(Vector2 mousePos, Vector3 center, Vector3 axis1, Vector3 axis2, float size)
         {
-            // Calculate plane corners
+            // Calculate plane corners - matching the renderer's corner calculation
             Vector3[] corners = new Vector3[4];
-            corners[0] = center + (axis1 + axis2) * size;
-            corners[1] = center + (axis1 - axis2) * size;
-            corners[2] = center + (-axis1 - axis2) * size;
-            corners[3] = center + (-axis1 + axis2) * size;
+            corners[0] = center;
+            corners[1] = center - axis1 * size;
+            corners[2] = center - axis1 * size - axis2 * size;
+            corners[3] = center - axis2 * size;
 
             // Check if any corner is behind camera
             for (int i = 0; i < 4; i++)
@@ -251,6 +265,21 @@ namespace MeshFreeHandles
                     return false;
             }
             return true;
+        }
+
+        private Vector3 CalculatePlaneOffset(Vector3 axis1, Vector3 axis2, float size, Vector3 camForward)
+        {
+            Vector3 offset = Vector3.zero;
+            
+            // Check if axis1 points towards camera
+            if (Vector3.Dot(axis1, -camForward) > 0)
+                offset += axis1 * size;
+                
+            // Check if axis2 points towards camera
+            if (Vector3.Dot(axis2, -camForward) > 0)
+                offset += axis2 * size;
+                
+            return offset;
         }
     }
 }

@@ -16,8 +16,8 @@ namespace MeshFreeHandles
         // Single axis drag
         private Vector3 dragStartWorldPos;
         private Vector3 axisDirection;
-        private Vector3 dragPlaneNormal;
-        private Vector3 dragStartHitPoint;
+        private Vector2 dragStartScreenPos;
+        private Vector3 dragStartTargetScreenPos;
 
         // Plane drag
         private bool isDraggingPlane;
@@ -53,26 +53,10 @@ namespace MeshFreeHandles
         {
             // Get axis direction in world space
             axisDirection = GetAxisDirection(space);
-
-            // Create drag plane
-            Vector3 cameraToTarget = (target.position - mainCamera.transform.position).normalized;
-            dragPlaneNormal = Vector3.Cross(axisDirection, cameraToTarget).normalized;
             
-            if (dragPlaneNormal.sqrMagnitude < 0.01f)
-            {
-                // Axis is parallel to camera direction, use alternative plane
-                Vector3 cameraRight = mainCamera.transform.right;
-                dragPlaneNormal = Vector3.Cross(axisDirection, cameraRight).normalized;
-            }
-
-            // Ray-plane intersection for start position
-            Ray ray = mainCamera.ScreenPointToRay(mousePos);
-            Plane dragPlane = new Plane(dragPlaneNormal, target.position);
-            
-            if (dragPlane.Raycast(ray, out float distance))
-            {
-                dragStartHitPoint = ray.GetPoint(distance);
-            }
+            // Store start positions
+            dragStartScreenPos = mousePos;
+            dragStartTargetScreenPos = mainCamera.WorldToScreenPoint(target.position);
         }
 
         private void StartPlaneDrag(Vector2 mousePos, HandleSpace space)
@@ -91,7 +75,34 @@ namespace MeshFreeHandles
                     break;
             }
 
-            planeStartPosition = target.position;
+            // Calculate the actual plane position (accounting for camera-facing offset)
+            Vector3 camForward = mainCamera.transform.forward;
+            float planeSize = TranslationHandleRenderer.PLANE_SIZE_MULTIPLIER * GetHandleScale();
+            
+            Vector3 offset = Vector3.zero;
+            switch (draggedAxis)
+            {
+                case 4: // XY Plane
+                    Vector3 dirX4 = space == HandleSpace.Local ? target.right : Vector3.right;
+                    Vector3 dirY4 = space == HandleSpace.Local ? target.up : Vector3.up;
+                    if (Vector3.Dot(dirX4, -camForward) > 0) offset += dirX4 * planeSize;
+                    if (Vector3.Dot(dirY4, -camForward) > 0) offset += dirY4 * planeSize;
+                    break;
+                case 5: // XZ Plane
+                    Vector3 dirX5 = space == HandleSpace.Local ? target.right : Vector3.right;
+                    Vector3 dirZ5 = space == HandleSpace.Local ? target.forward : Vector3.forward;
+                    if (Vector3.Dot(dirX5, -camForward) > 0) offset += dirX5 * planeSize;
+                    if (Vector3.Dot(dirZ5, -camForward) > 0) offset += dirZ5 * planeSize;
+                    break;
+                case 6: // YZ Plane
+                    Vector3 dirY6 = space == HandleSpace.Local ? target.up : Vector3.up;
+                    Vector3 dirZ6 = space == HandleSpace.Local ? target.forward : Vector3.forward;
+                    if (Vector3.Dot(dirY6, -camForward) > 0) offset += dirY6 * planeSize;
+                    if (Vector3.Dot(dirZ6, -camForward) > 0) offset += dirZ6 * planeSize;
+                    break;
+            }
+
+            planeStartPosition = target.position + offset;
 
             // Calculate initial offset from plane center to hit point
             Ray ray = mainCamera.ScreenPointToRay(mousePos);
@@ -100,8 +111,15 @@ namespace MeshFreeHandles
             if (dragPlane.Raycast(ray, out float distance))
             {
                 Vector3 hitPoint = ray.GetPoint(distance);
-                initialOffset = planeStartPosition - hitPoint;
+                initialOffset = target.position - hitPoint;
             }
+        }
+
+        private float GetHandleScale()
+        {
+            // Estimate handle scale based on camera distance
+            float distance = Vector3.Distance(mainCamera.transform.position, target.position);
+            return distance * 0.1f; // Adjust multiplier as needed
         }
 
         public void UpdateDrag(Vector2 mousePos)
@@ -120,20 +138,27 @@ namespace MeshFreeHandles
 
         private void UpdateAxisDrag(Vector2 mousePos)
         {
-            Ray ray = mainCamera.ScreenPointToRay(mousePos);
-            Plane dragPlane = new Plane(dragPlaneNormal, dragStartWorldPos);
-
-            if (dragPlane.Raycast(ray, out float distance))
-            {
-                Vector3 currentHitPoint = ray.GetPoint(distance);
-                Vector3 dragDelta = currentHitPoint - dragStartHitPoint;
-                
-                // Project delta onto axis
-                float axisMovement = Vector3.Dot(dragDelta, axisDirection);
-                
-                // Apply movement
-                target.position = dragStartWorldPos + axisDirection * axisMovement;
-            }
+            // Calculate how much the mouse moved
+            Vector2 mouseDelta = mousePos - dragStartScreenPos;
+            
+            // Project the axis direction to screen space
+            Vector3 axisEndWorld = dragStartWorldPos + axisDirection;
+            Vector3 axisEndScreen = mainCamera.WorldToScreenPoint(axisEndWorld);
+            Vector2 axisScreenDirection = new Vector2(
+                axisEndScreen.x - dragStartTargetScreenPos.x,
+                axisEndScreen.y - dragStartTargetScreenPos.y
+            ).normalized;
+            
+            // Calculate movement along the axis
+            float screenMovement = Vector2.Dot(mouseDelta, axisScreenDirection);
+            
+            // Convert screen movement to world movement
+            // Scale by distance from camera for consistent movement speed
+            float distanceToCamera = Vector3.Distance(mainCamera.transform.position, dragStartWorldPos);
+            float worldMovement = screenMovement * distanceToCamera * 0.001f;
+            
+            // Apply movement
+            target.position = dragStartWorldPos + axisDirection * worldMovement;
         }
 
         private void UpdatePlaneDrag(Vector2 mousePos)

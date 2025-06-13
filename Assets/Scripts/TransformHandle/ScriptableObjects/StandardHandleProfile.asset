@@ -18,6 +18,12 @@ MonoBehaviour:
   showTranslationGlobalX: 1
   showTranslationGlobalY: 0
   showTranslationGlobalZ: 1
+  showTranslationLocalXY: 0
+  showTranslationLocalXZ: 0
+  showTranslationLocalYZ: 0
+  showTranslationGlobalXY: 0
+  showTranslationGlobalXZ: 0
+  showTranslationGlobalYZ: 0
   showRotationLocalX: 1
   showRotationLocalY: 0
   showRotationLocalZ: 0
