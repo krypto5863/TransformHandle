@@ -5,7 +5,7 @@ namespace MeshFreeHandles
 {
     /// <summary>
     /// Manages user input and coordinates interaction components,
-    /// now supporting Local/Global handle space.
+    /// now supporting Local/Global handle space and mixed-space profiles.
     /// </summary>
     public class HandleInteraction
     {
@@ -23,6 +23,10 @@ namespace MeshFreeHandles
         public int HoveredAxis { get; private set; } = -1;
         public bool IsDragging   { get; private set; }
         public int DraggedAxis   { get; private set; } = -1;
+
+        // Profile state
+        private HandleProfile currentProfile;
+        private HandleSpace draggedAxisSpace; // Remember which space the dragged axis uses
 
         public HandleInteraction(Camera camera)
         {
@@ -69,10 +73,48 @@ namespace MeshFreeHandles
             }
         }
 
+        /// <summary>
+        /// Updates hover and drag state using a HandleProfile for mixed-space support.
+        /// </summary>
+        public void UpdateWithProfile(float handleScale, HandleType handleType, HandleProfile profile)
+        {
+            if (target == null || mainCamera == null || profile == null) return;
+
+            currentProfile = profile;
+
+            Vector2 mousePos     = Mouse.current?.position.ReadValue() ?? Vector2.zero;
+            bool    mousePressed = Mouse.current?.leftButton.wasPressedThisFrame  ?? false;
+            bool    mouseReleased= Mouse.current?.leftButton.wasReleasedThisFrame ?? false;
+
+            if (!IsDragging)
+            {
+                // Update hover state with profile
+                HoveredAxis = hoverDetector.GetHoveredAxisWithProfile(mousePos, target, handleScale, handleType, profile);
+
+                // Start drag if mouse pressed on a handle
+                if (mousePressed && HoveredAxis >= 0)
+                {
+                    // Determine which space this axis uses from profile
+                    HandleSpace axisSpace = GetAxisSpaceFromProfile(profile, handleType, HoveredAxis);
+                    StartDragWithSpace(handleType, axisSpace, mousePos);
+                }
+            }
+            else
+            {
+                // Continue drag
+                currentDragHandler?.UpdateDrag(mousePos);
+
+                // End drag if mouse released
+                if (mouseReleased)
+                    EndDrag();
+            }
+        }
+
         private void StartDrag(HandleType handleType, HandleSpace handleSpace, Vector2 mousePos)
         {
             IsDragging  = true;
             DraggedAxis = HoveredAxis;
+            draggedAxisSpace = handleSpace;
 
             // Choose handler
             switch (handleType)
@@ -94,12 +136,56 @@ namespace MeshFreeHandles
             currentDragHandler.StartDrag(target, DraggedAxis, mousePos, handleSpace);
         }
 
+        private void StartDragWithSpace(HandleType handleType, HandleSpace axisSpace, Vector2 mousePos)
+        {
+            IsDragging  = true;
+            DraggedAxis = HoveredAxis;
+            draggedAxisSpace = axisSpace;
+
+            // Choose handler
+            switch (handleType)
+            {
+                case HandleType.Translation:
+                    currentDragHandler = translationHandler;
+                    break;
+                case HandleType.Rotation:
+                    currentDragHandler = rotationHandler;
+                    break;
+                case HandleType.Scale:
+                    currentDragHandler = scaleHandler;
+                    break;
+                default:
+                    return;
+            }
+
+            // Pass the determined space into StartDrag
+            currentDragHandler.StartDrag(target, DraggedAxis, mousePos, axisSpace);
+        }
+
         private void EndDrag()
         {
             currentDragHandler?.EndDrag();
             currentDragHandler = null;
             IsDragging  = false;
             DraggedAxis = -1;
+        }
+
+        /// <summary>
+        /// Determines which space an axis should use based on the profile configuration.
+        /// </summary>
+        private HandleSpace GetAxisSpaceFromProfile(HandleProfile profile, HandleType handleType, int axis)
+        {
+            // Check if this axis is enabled in local space
+            bool hasLocal = profile.IsAxisEnabled(handleType, axis, HandleSpace.Local);
+            // Check if this axis is enabled in global space  
+            bool hasGlobal = profile.IsAxisEnabled(handleType, axis, HandleSpace.Global);
+            
+            // If both are enabled, we need a priority system
+            // For now, prefer local space if both are enabled
+            if (hasLocal) return HandleSpace.Local;
+            if (hasGlobal) return HandleSpace.Global;
+            
+            return HandleSpace.Local; // Fallback
         }
     }
 }

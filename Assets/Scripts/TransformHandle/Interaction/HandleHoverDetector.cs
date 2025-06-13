@@ -4,7 +4,7 @@ namespace MeshFreeHandles
 {
     /// <summary>
     /// Responsible for detecting which handle axis is being hovered over,
-    /// now supporting Local/Global handle space.
+    /// now supporting Local/Global handle space and mixed-space profiles.
     /// </summary>
     public class HandleHoverDetector
     {
@@ -40,6 +40,31 @@ namespace MeshFreeHandles
             }
         }
 
+        /// <summary>
+        /// Returns the index of the hovered axis using a profile for mixed-space support.
+        /// </summary>
+        public int GetHoveredAxisWithProfile(Vector2 mousePos, Transform target, float handleScale, HandleType handleType, HandleProfile profile)
+        {
+            if (target == null || mainCamera == null || profile == null)
+                return -1;
+
+            Vector3 screenCenter = mainCamera.WorldToScreenPoint(target.position);
+            if (screenCenter.z < 0f)
+                return -1; // Behind camera
+
+            switch (handleType)
+            {
+                case HandleType.Translation:
+                    return GetClosestTranslationAxisWithProfile(mousePos, target, handleScale, profile);
+                case HandleType.Rotation:
+                    return GetClosestRotationAxisWithProfile(mousePos, target, handleScale, profile);
+                case HandleType.Scale:
+                    return GetClosestScaleAxisWithProfile(mousePos, target, handleScale, profile);
+                default:
+                    return -1;
+            }
+        }
+
         private int GetClosestTranslationAxis(Vector2 mousePos, Transform target, float handleScale, HandleSpace handleSpace)
         {
             float minDist = float.MaxValue;
@@ -59,6 +84,40 @@ namespace MeshFreeHandles
             return axis;
         }
 
+        private int GetClosestTranslationAxisWithProfile(Vector2 mousePos, Transform target, float handleScale, HandleProfile profile)
+        {
+            float minDist = float.MaxValue;
+            int   axis   = -1;
+
+            for (int i = 0; i < 3; i++)
+            {
+                // Check both local and global spaces
+                if (profile.IsAxisEnabled(HandleType.Translation, i, HandleSpace.Local))
+                {
+                    Vector3 dir = GetAxisDirection(target, i, HandleSpace.Local);
+                    float dist = GetDistanceToAxis(mousePos, target.position, dir, handleScale);
+                    if (dist < minDist && dist < 10f)
+                    {
+                        minDist = dist;
+                        axis = i;
+                    }
+                }
+
+                if (profile.IsAxisEnabled(HandleType.Translation, i, HandleSpace.Global))
+                {
+                    Vector3 dir = GetAxisDirection(target, i, HandleSpace.Global);
+                    float dist = GetDistanceToAxis(mousePos, target.position, dir, handleScale);
+                    if (dist < minDist && dist < 10f)
+                    {
+                        minDist = dist;
+                        axis = i;
+                    }
+                }
+            }
+
+            return axis;
+        }
+
         private int GetClosestRotationAxis(Vector2 mousePos, Transform target, float handleScale, HandleSpace handleSpace)
         {
             float minDist = float.MaxValue;
@@ -72,6 +131,115 @@ namespace MeshFreeHandles
                 {
                     minDist = dist;
                     axis    = i;
+                }
+            }
+
+            return axis;
+        }
+
+        private int GetClosestRotationAxisWithProfile(Vector2 mousePos, Transform target, float handleScale, HandleProfile profile)
+        {
+            float minDist = float.MaxValue;
+            int   axis   = -1;
+
+            for (int i = 0; i < 3; i++)
+            {
+                // Check both local and global spaces
+                if (profile.IsAxisEnabled(HandleType.Rotation, i, HandleSpace.Local))
+                {
+                    Vector3 normal = GetRotationNormal(target, i, HandleSpace.Local);
+                    float dist = GetDistanceToCircle(mousePos, target.position, normal, handleScale);
+                    if (dist < minDist && dist < 15f)
+                    {
+                        minDist = dist;
+                        axis = i;
+                    }
+                }
+
+                if (profile.IsAxisEnabled(HandleType.Rotation, i, HandleSpace.Global))
+                {
+                    Vector3 normal = GetRotationNormal(target, i, HandleSpace.Global);
+                    float dist = GetDistanceToCircle(mousePos, target.position, normal, handleScale);
+                    if (dist < minDist && dist < 15f)
+                    {
+                        minDist = dist;
+                        axis = i;
+                    }
+                }
+            }
+
+            return axis;
+        }
+
+        private int GetClosestScaleAxis(Vector2 mousePos, Transform target, float handleScale, HandleSpace handleSpace)
+        {
+            float minDist = float.MaxValue;
+            int axis = -1;
+
+            // Check axis handles (0, 1, 2)
+            for (int i = 0; i < 3; i++)
+            {
+                Vector3 dir = GetAxisDirection(target, i, HandleSpace.Local); // Scale always uses local
+                float dist = GetDistanceToScaleHandle(mousePos, target.position, dir, handleScale);
+                if (dist < minDist && dist < 20f) // Larger threshold for boxes
+                {
+                    minDist = dist;
+                    axis = i;
+                }
+            }
+
+            // Check center handle (index 3)
+            float centerDist = GetDistanceToCenterHandle(mousePos, target.position, handleScale * 0.06f * 1.5f);
+            if (centerDist < minDist && centerDist < 20f)
+            {
+                minDist = centerDist;
+                axis = 3;
+            }
+
+            return axis;
+        }
+
+        private int GetClosestScaleAxisWithProfile(Vector2 mousePos, Transform target, float handleScale, HandleProfile profile)
+        {
+            float minDist = float.MaxValue;
+            int axis = -1;
+
+            // Check axis handles (0, 1, 2)
+            for (int i = 0; i < 3; i++)
+            {
+                // For scale, check both spaces but typically local is used
+                if (profile.IsAxisEnabled(HandleType.Scale, i, HandleSpace.Local))
+                {
+                    Vector3 dir = GetAxisDirection(target, i, HandleSpace.Local);
+                    float dist = GetDistanceToScaleHandle(mousePos, target.position, dir, handleScale);
+                    if (dist < minDist && dist < 20f)
+                    {
+                        minDist = dist;
+                        axis = i;
+                    }
+                }
+
+                if (profile.IsAxisEnabled(HandleType.Scale, i, HandleSpace.Global))
+                {
+                    Vector3 dir = GetAxisDirection(target, i, HandleSpace.Global);
+                    float dist = GetDistanceToScaleHandle(mousePos, target.position, dir, handleScale);
+                    if (dist < minDist && dist < 20f)
+                    {
+                        minDist = dist;
+                        axis = i;
+                    }
+                }
+            }
+
+            // Check center handle (index 3) - uniform scale
+            if (profile.IsAxisEnabled(HandleType.Scale, 3, HandleSpace.Local) || 
+                profile.IsAxisEnabled(HandleType.Scale, 3, HandleSpace.Global))
+            {
+                float centerDist = GetDistanceToCenterHandle(mousePos, target.position, handleScale * 0.06f * 1.5f);
+                if (centerDist < minDist && centerDist < 20f)
+                {
+                    minDist = centerDist;
+                    axis = 3;
                 }
             }
 
@@ -151,34 +319,6 @@ namespace MeshFreeHandles
             }
 
             return minDist;
-        }
-
-        private int GetClosestScaleAxis(Vector2 mousePos, Transform target, float handleScale, HandleSpace handleSpace)
-        {
-            float minDist = float.MaxValue;
-            int axis = -1;
-
-            // Check axis handles (0, 1, 2)
-            for (int i = 0; i < 3; i++)
-            {
-                Vector3 dir = GetAxisDirection(target, i, HandleSpace.Local); // Scale always uses local
-                float dist = GetDistanceToScaleHandle(mousePos, target.position, dir, handleScale);
-                if (dist < minDist && dist < 20f) // Larger threshold for boxes
-                {
-                    minDist = dist;
-                    axis = i;
-                }
-            }
-
-            // Check center handle (index 3)
-            float centerDist = GetDistanceToCenterHandle(mousePos, target.position, handleScale * 0.06f * 1.5f);
-            if (centerDist < minDist && centerDist < 20f)
-            {
-                minDist = centerDist;
-                axis = 3;
-            }
-
-            return axis;
         }
 
         private float GetDistanceToScaleHandle(Vector2 mousePos, Vector3 origin, Vector3 direction, float scale)

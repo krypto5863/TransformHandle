@@ -44,6 +44,10 @@ namespace MeshFreeHandles
         [Tooltip("Multiplier applied when maintaining constant screen size.")]
         public float screenSizeMultiplier = 0.1f;
 
+        [Header("Profile Settings")]
+        [Tooltip("Default profile used when target has no HandleProfileHolder")]
+        [SerializeField] private HandleProfile defaultProfile;
+
         [Header("State")]
         [SerializeField] private HandleType handleType = HandleType.Translation;
         [SerializeField] private HandleSpace handleSpace = HandleSpace.Local;
@@ -52,6 +56,7 @@ namespace MeshFreeHandles
         private Camera mainCamera;
         private HandleInteraction interaction;
         private HandleRenderer handleRenderer;
+        private HandleProfile activeProfile;
 
         // Events
         public event Action<Transform> OnTargetChanged;
@@ -65,8 +70,8 @@ namespace MeshFreeHandles
         public HandleSpace CurrentHandleSpace => handleSpace;
         public bool IsActive => targetTransform != null;
         public bool IsDragging => interaction?.IsDragging ?? false;
-
-        public bool IsHovering => interaction?.HoveredAxis >= 0f;
+        public bool IsHovering => interaction?.HoveredAxis != -1;
+        public int HoveredAxis => interaction?.HoveredAxis ?? -1;
 
         void Awake()
         {
@@ -93,9 +98,20 @@ namespace MeshFreeHandles
             // Update interaction target every frame
             interaction.UpdateTarget(targetTransform);
 
-            // Compute scale and update interaction
+            // Compute scale
             float scale = GetHandleScale();
-            interaction.Update(scale, handleType, handleSpace);
+
+            // Pass profile to interaction if available
+            if (activeProfile != null)
+            {
+                // Profile mode: Pass the profile for mixed space handling
+                interaction.UpdateWithProfile(scale, handleType, activeProfile);
+            }
+            else
+            {
+                // Default mode: Use manager's handleType and handleSpace
+                interaction.Update(scale, handleType, handleSpace);
+            }
 
             // Check if transform was modified (for event firing)
             if (interaction.IsDragging)
@@ -112,6 +128,20 @@ namespace MeshFreeHandles
             if (targetTransform == target) return;
 
             targetTransform = target;
+            
+            // Check for custom profile on target
+            if (target != null)
+            {
+                var profileHolder = target.GetComponent<HandleProfileHolder>();
+                activeProfile = (profileHolder != null && profileHolder.HasProfile) 
+                    ? profileHolder.Profile 
+                    : null;
+            }
+            else
+            {
+                activeProfile = null;
+            }
+            
             OnTargetChanged?.Invoke(target);
         }
 
@@ -121,6 +151,20 @@ namespace MeshFreeHandles
         public void ClearTarget()
         {
             SetTarget(null);
+        }
+
+        /// <summary>
+        /// Refreshes the profile from the current target
+        /// </summary>
+        public void RefreshProfile()
+        {
+            if (targetTransform != null)
+            {
+                var profileHolder = targetTransform.GetComponent<HandleProfileHolder>();
+                activeProfile = (profileHolder != null && profileHolder.HasProfile) 
+                    ? profileHolder.Profile 
+                    : null;
+            }
         }
 
         /// <summary>
@@ -161,9 +205,13 @@ namespace MeshFreeHandles
 
         /// <summary>
         /// Toggles between Local and Global axis space.
+        /// Only works when no profile is active on the current target.
         /// </summary>
         public void ToggleHandleSpace()
         {
+            // Don't allow space toggle when using a profile
+            if (activeProfile != null) return;
+
             handleSpace = (handleSpace == HandleSpace.Local)
                 ? HandleSpace.Global
                 : HandleSpace.Local;
@@ -172,10 +220,14 @@ namespace MeshFreeHandles
         }
 
         /// <summary>
-        /// Sets the handle space directly
+        /// Sets the handle space directly.
+        /// Only works when no profile is active on the current target.
         /// </summary>
         public void SetHandleSpace(HandleSpace space)
         {
+            // Don't allow space change when using a profile
+            if (activeProfile != null) return;
+
             if (handleSpace != space)
             {
                 handleSpace = space;
@@ -195,12 +247,28 @@ namespace MeshFreeHandles
             if (vp.z < 0f) return;
 
             float scale = GetHandleScale();
-            handleRenderer.Render(
-                targetTransform,
-                scale,
-                interaction.HoveredAxis,
-                handleType,
-                handleSpace);
+
+            if (activeProfile != null)
+            {
+                // Profile mode: Render based on profile settings
+                // This would need a new method in HandleRenderer that can handle mixed spaces
+                handleRenderer.RenderWithProfile(
+                    targetTransform,
+                    scale,
+                    interaction.HoveredAxis,
+                    handleType,
+                    activeProfile);
+            }
+            else
+            {
+                // Default mode: Use manager settings
+                handleRenderer.Render(
+                    targetTransform,
+                    scale,
+                    interaction.HoveredAxis,
+                    handleType,
+                    handleSpace);
+            }
         }
 
         private float GetHandleScale()
