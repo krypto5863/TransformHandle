@@ -10,6 +10,6 @@ namespace MeshFreeHandles
         /// <summary>
         /// Renders handles based on a profile configuration
         /// </summary>
-        void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile, float alpha = 1f);
+        void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile);
     }
 }

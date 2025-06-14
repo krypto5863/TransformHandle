@@ -11,7 +11,6 @@ namespace MeshFreeHandles
         private Camera mainCamera;
         private Transform target;
         private int draggedAxis;
-        private HandleSpace handleSpace;
 
         // Single axis drag
         private Vector3 dragStartWorldPos;
@@ -34,7 +33,6 @@ namespace MeshFreeHandles
         {
             this.target = target;
             this.draggedAxis = axis;
-            this.handleSpace = space;
             
             dragStartWorldPos = target.position;
             isDraggingPlane = axis >= 4 && axis <= 6;

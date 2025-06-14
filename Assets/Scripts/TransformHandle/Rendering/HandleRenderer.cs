@@ -49,7 +49,7 @@ namespace MeshFreeHandles
             GL.PushMatrix();
             GL.MultMatrix(Matrix4x4.identity);
 
-            renderer.Render(target, scale, hoveredAxis, 1f, handleSpace);
+            renderer.Render(target, scale, hoveredAxis, handleSpace);
 
             GL.PopMatrix();
         }
@@ -73,7 +73,7 @@ namespace MeshFreeHandles
             // Delegate to specialized renderer with profile
             if (renderer is IProfileAwareRenderer profileRenderer)
             {
-                profileRenderer.RenderWithProfile(target, scale, hoveredAxis, profile, 1f);
+                profileRenderer.RenderWithProfile(target, scale, hoveredAxis, profile);
             }
             else
             {

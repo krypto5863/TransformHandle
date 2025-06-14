@@ -20,67 +20,65 @@ namespace MeshFreeHandles
         private readonly float baseThickness = 6f;
         private readonly float hoverThickness = 12f;
 
-        public void Render(Transform target, float scale, int hoveredAxis, float alpha = 1f, HandleSpace handleSpace = HandleSpace.Local)
+        public void Render(Transform target, float scale, int hoveredAxis, HandleSpace handleSpace = HandleSpace.Local)
         {
             Vector3 position = target.position;
 
             // Render planes FIRST (behind axes)
-            RenderPlanes(position, target, scale, hoveredAxis, alpha, handleSpace);
+            RenderPlanes(position, target, scale, hoveredAxis, handleSpace);
 
             // Then render axes (on top)
-            for (int axis = 0; axis < 3; axis++)
-            {
-                Vector3 direction = TranslationHandleUtils.GetAxisDirection(target, axis, handleSpace);
-                Color color = TranslationHandleUtils.GetAxisColor(axis);
-                DrawAxis(position, direction, color, scale, axis, hoveredAxis, alpha);
-            }
+            RenderAxesInternal(position, target, scale, hoveredAxis, (axis, checkSpace) => checkSpace == handleSpace);
 
-            DrawCenterPoint(position, scale * 0.1f, alpha);
+            DrawCenterPoint(position, scale * 0.1f);
         }
 
-        public void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile, float alpha = 1f)
+        public void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile)
         {
             Vector3 position = target.position;
 
             // First render planes (behind)
-            RenderPlanesWithProfile(target, position, scale, hoveredAxis, profile, alpha);
+            RenderPlanesWithProfile(target, position, scale, hoveredAxis, profile);
 
             // Then render axes (on top)
+            RenderAxesInternal(position, target, scale, hoveredAxis, 
+                (axis, space) => profile.IsAxisEnabled(HandleType.Translation, axis, space));
+
+            // Always draw center point
+            DrawCenterPoint(position, scale * 0.1f);
+        }
+
+        private void RenderAxesInternal(Vector3 position, Transform target, float scale, int hoveredAxis,
+                                       System.Func<int, HandleSpace, bool> shouldRenderAxis)
+        {
             for (int axis = 0; axis < 3; axis++)
             {
                 foreach (HandleSpace space in System.Enum.GetValues(typeof(HandleSpace)))
                 {
-                    if (profile.IsAxisEnabled(HandleType.Translation, axis, space))
+                    if (shouldRenderAxis(axis, space))
                     {
                         Vector3 direction = TranslationHandleUtils.GetAxisDirection(target, axis, space);
                         Color color = TranslationHandleUtils.GetAxisColor(axis);
-                        DrawAxis(position, direction, color, scale, axis, hoveredAxis, alpha);
+                        DrawAxis(position, direction, color, scale, axis, hoveredAxis);
                     }
                 }
             }
-
-            // Always draw center point
-            DrawCenterPoint(position, scale * 0.1f, alpha);
         }
 
-        private void RenderPlanes(Vector3 position, Transform target, float scale, int hoveredAxis, float alpha, HandleSpace space)
+        private void RenderPlanes(Vector3 position, Transform target, float scale, int hoveredAxis, HandleSpace space)
         {
-            float size = scale * PLANE_SIZE_MULTIPLIER;
-            Camera cam = Camera.main;
-            Vector3 camForward = cam.transform.forward;
-
-            for (int planeIndex = 4; planeIndex <= 6; planeIndex++)
-            {
-                var (axis1, axis2) = TranslationHandleUtils.GetPlaneAxes(target, planeIndex, space);
-                Vector3 offset = TranslationHandleUtils.CalculatePlaneOffset(axis1, axis2, size, camForward);
-                Color color = TranslationHandleUtils.GetAxisColor(planeIndex);
-                
-                DrawPlane(position + offset, axis1, axis2, color, size, planeIndex, hoveredAxis, alpha);
-            }
+            RenderPlanesInternal(position, target, scale, hoveredAxis, (planeIndex, checkSpace) => checkSpace == space);
         }
 
-        private void RenderPlanesWithProfile(Transform target, Vector3 position, float scale, 
-                                           int hoveredAxis, HandleProfile profile, float alpha)
+        private void RenderPlanesWithProfile(Transform target, Vector3 position, float scale,
+                                           int hoveredAxis, HandleProfile profile)
+        {
+            RenderPlanesInternal(position, target, scale, hoveredAxis, 
+                (planeIndex, space) => profile.IsAxisEnabled(HandleType.Translation, planeIndex, space));
+        }
+
+        private void RenderPlanesInternal(Vector3 position, Transform target, float scale, int hoveredAxis, 
+                                         System.Func<int, HandleSpace, bool> shouldRenderPlane)
         {
             float size = scale * PLANE_SIZE_MULTIPLIER;
             Camera cam = Camera.main;
@@ -90,23 +88,22 @@ namespace MeshFreeHandles
             {
                 foreach (HandleSpace space in System.Enum.GetValues(typeof(HandleSpace)))
                 {
-                    if (profile.IsAxisEnabled(HandleType.Translation, planeIndex, space))
+                    if (shouldRenderPlane(planeIndex, space))
                     {
                         var (axis1, axis2) = TranslationHandleUtils.GetPlaneAxes(target, planeIndex, space);
                         Vector3 offset = TranslationHandleUtils.CalculatePlaneOffset(axis1, axis2, size, camForward);
                         Color color = TranslationHandleUtils.GetAxisColor(planeIndex);
                         
-                        DrawPlane(position + offset, axis1, axis2, color, size, planeIndex, hoveredAxis, alpha);
+                        DrawPlane(position + offset, axis1, axis2, color, size, planeIndex, hoveredAxis);
                     }
                 }
             }
         }
 
         private void DrawAxis(Vector3 origin, Vector3 direction, Color color, float length,
-                              int axisIndex, int hoveredAxis, float alphaMultiplier)
+                              int axisIndex, int hoveredAxis)
         {
             float alpha = (hoveredAxis == axisIndex) ? selectedAlpha : axisAlpha;
-            alpha *= alphaMultiplier;
             Color finalColor = new Color(color.r, color.g, color.b, alpha);
 
             Vector3 endPoint = origin + direction * length;
@@ -167,11 +164,10 @@ namespace MeshFreeHandles
         }
 
         private void DrawPlane(Vector3 center, Vector3 axis1, Vector3 axis2, Color color, 
-                             float size, int planeIndex, int hoveredAxis, float alphaMultiplier)
+                             float size, int planeIndex, int hoveredAxis)
         {
             bool isHovered = (hoveredAxis == planeIndex);
             float alpha = isHovered ? planeHoverAlpha : planeAlpha;
-            alpha *= alphaMultiplier;
 
             Color fillColor = new Color(color.r, color.g, color.b, alpha);
             Color outlineColor = new Color(color.r, color.g, color.b, alpha * 2f);
@@ -202,10 +198,10 @@ namespace MeshFreeHandles
             GL.End();
         }
 
-        private void DrawCenterPoint(Vector3 center, float size, float alpha)
+        private void DrawCenterPoint(Vector3 center, float size)
         {
             GL.Begin(GL.LINES);
-            GL.Color(new Color(1f, 1f, 1f, 0.5f * alpha));
+            GL.Color(new Color(1f, 1f, 1f, 0.5f));
             GL.Vertex(center + Vector3.right * size); GL.Vertex(center - Vector3.right * size);
             GL.Vertex(center + Vector3.up * size);    GL.Vertex(center - Vector3.up * size);
             GL.Vertex(center + Vector3.forward * size); GL.Vertex(center - Vector3.forward * size);

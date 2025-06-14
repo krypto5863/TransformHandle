@@ -16,7 +16,7 @@ namespace MeshFreeHandles
         private readonly float baseThickness = 6f;
         private readonly float hoverThickness = 12f;
 
-        public void Render(Transform target, float scale, int hoveredAxis, float alpha = 1f, HandleSpace handleSpace = HandleSpace.Local)
+        public void Render(Transform target, float scale, int hoveredAxis, HandleSpace handleSpace = HandleSpace.Local)
         {
             Vector3 position = target.position;
             Camera camera = Camera.main;
@@ -26,19 +26,19 @@ namespace MeshFreeHandles
             Vector3 dirZ = (handleSpace == HandleSpace.Local) ? target.forward : Vector3.forward;
 
             // X-axis rotation circle
-            DrawRotationCircle(position, dirX, xAxisColor, scale, 0, hoveredAxis, alpha, camera);
+            DrawRotationCircle(position, dirX, xAxisColor, scale, 0, hoveredAxis, camera);
             
             // Y-axis rotation circle
-            DrawRotationCircle(position, dirY, yAxisColor, scale, 1, hoveredAxis, alpha, camera);
+            DrawRotationCircle(position, dirY, yAxisColor, scale, 1, hoveredAxis, camera);
             
             // Z-axis rotation circle
-            DrawRotationCircle(position, dirZ, zAxisColor, scale, 2, hoveredAxis, alpha, camera);
+            DrawRotationCircle(position, dirZ, zAxisColor, scale, 2, hoveredAxis, camera);
 
             // Free rotation sphere
-            DrawCameraFacingCircle(position, scale * 1.2f, alpha, camera);
+            DrawCameraFacingCircle(position, scale * 1.2f, camera);
         }
 
-        public void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile, float alpha = 1f)
+        public void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile)
         {
             Vector3 position = target.position;
             Camera camera = Camera.main;
@@ -46,33 +46,26 @@ namespace MeshFreeHandles
             // Render each axis based on profile settings
             for (int axis = 0; axis < 3; axis++)
             {
-                Color color = GetAxisColor(axis);
-                bool isHovered = (hoveredAxis == axis);
+                Color color = TranslationHandleUtils.GetAxisColor(axis);
 
-                // Check local space
-                if (profile.IsAxisEnabled(HandleType.Rotation, axis, HandleSpace.Local))
+                foreach (HandleSpace space in System.Enum.GetValues(typeof(HandleSpace)))
                 {
-                    Vector3 normal = GetLocalAxisDirection(target, axis);
-                    DrawRotationCircle(position, normal, color, scale, axis, hoveredAxis, alpha, camera);
-                }
-
-                // Check global space  
-                if (profile.IsAxisEnabled(HandleType.Rotation, axis, HandleSpace.Global))
-                {
-                    Vector3 normal = GetGlobalAxisDirection(axis);
-                    DrawRotationCircle(position, normal, color, scale, axis, hoveredAxis, alpha, camera);
+                    if (profile.IsAxisEnabled(HandleType.Rotation, axis, space))
+                    {
+                        Vector3 normal = TranslationHandleUtils.GetAxisDirection(target, axis, space);
+                        DrawRotationCircle(position, normal, color, scale, axis, hoveredAxis, camera);
+                    }
                 }
             }
 
             // Free rotation sphere
-            DrawCameraFacingCircle(position, scale * 1.2f, alpha, camera);
+            DrawCameraFacingCircle(position, scale * 1.2f, camera);
         }
 
         private void DrawRotationCircle(Vector3 center, Vector3 normal, Color color, float radius,
-                                        int axisIndex, int hoveredAxis, float alphaMultiplier, Camera camera)
+                                        int axisIndex, int hoveredAxis, Camera camera)
         {
             float alpha = (hoveredAxis == axisIndex) ? selectedAlpha : axisAlpha;
-            alpha *= alphaMultiplier;
             Color finalColor = new Color(color.r, color.g, color.b, alpha);
 
             // Skip if circle is edge-on
@@ -113,11 +106,11 @@ namespace MeshFreeHandles
             }
         }
 
-        private void DrawCameraFacingCircle(Vector3 center, float radius, float alpha, Camera camera)
+        private void DrawCameraFacingCircle(Vector3 center, float radius, Camera camera)
         {
             Vector3 normal = (camera.transform.position - center).normalized;
             float thickness = baseThickness * 0.8f;
-            Color color = new Color(1f, 1f, 1f, 0.3f * alpha);
+            Color color = new Color(1f, 1f, 1f, 0.3f);
             ThickLineHelper.DrawThickCircle(center, normal, radius, color, circleSegments, thickness);
         }
 
