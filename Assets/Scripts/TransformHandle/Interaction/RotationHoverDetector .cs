@@ -8,6 +8,7 @@ namespace MeshFreeHandles
     public class RotationHoverDetector : BaseHoverDetector
     {
         private const int CIRCLE_SEGMENTS = 64;
+        private const float FREE_ROTATION_SCALE = 1.2f; // Same as in renderer
 
         public RotationHoverDetector(Camera camera) : base(camera) { }
 
@@ -16,6 +17,7 @@ namespace MeshFreeHandles
             float minDist = float.MaxValue;
             int axis = -1;
 
+            // Check normal rotation axes (0-2)
             for (int i = 0; i < 3; i++)
             {
                 Vector3 normal = GetAxisDirection(target, i, handleSpace);
@@ -28,6 +30,13 @@ namespace MeshFreeHandles
                 }
             }
 
+            // Check free rotation ring (axis 3)
+            float freeRotationDist = GetDistanceToFreeRotationCircle(mousePos, target.position, handleScale * FREE_ROTATION_SCALE);
+            if (freeRotationDist < minDist && freeRotationDist < ROTATION_THRESHOLD)
+            {
+                axis = 3;
+            }
+
             return axis;
         }
 
@@ -36,6 +45,7 @@ namespace MeshFreeHandles
             float minDist = float.MaxValue;
             int axis = -1;
 
+            // Check normal rotation axes (0-2)
             for (int i = 0; i < 3; i++)
             {
                 // Check local space
@@ -58,6 +68,17 @@ namespace MeshFreeHandles
                         minDist = dist;
                         axis = i;
                     }
+                }
+            }
+
+            // Check free rotation ring (axis 3)
+            if (profile.IsAxisEnabled(HandleType.Rotation, 3, HandleSpace.Local) ||
+                profile.IsAxisEnabled(HandleType.Rotation, 3, HandleSpace.Global))
+            {
+                float freeRotationDist = GetDistanceToFreeRotationCircle(mousePos, target.position, handleScale * FREE_ROTATION_SCALE);
+                if (freeRotationDist < minDist && freeRotationDist < ROTATION_THRESHOLD)
+                {
+                    axis = 3;
                 }
             }
 
@@ -95,6 +116,36 @@ namespace MeshFreeHandles
                         float dist = Vector2.Distance(mousePos, new Vector2(screenPoint.x, screenPoint.y));
                         minDist = Mathf.Min(minDist, dist);
                     }
+                }
+            }
+
+            return minDist;
+        }
+
+        private float GetDistanceToFreeRotationCircle(Vector2 mousePos, Vector3 center, float radius)
+        {
+            // Free rotation circle is always camera-facing
+            Vector3 normal = (mainCamera.transform.position - center).normalized;
+            
+            // For camera-facing circles, we need a different approach
+            // since all points are equidistant from the camera
+            Vector3 tangent1 = GetPerpendicularVector(normal);
+            Vector3 tangent2 = Vector3.Cross(normal, tangent1).normalized;
+
+            float minDist = float.MaxValue;
+
+            // Sample all points on the circle without visibility culling
+            for (int i = 0; i < CIRCLE_SEGMENTS; i++)
+            {
+                float angle = i / (float)CIRCLE_SEGMENTS * Mathf.PI * 2f;
+                Vector3 direction = tangent1 * Mathf.Cos(angle) + tangent2 * Mathf.Sin(angle);
+                Vector3 worldPoint = center + direction * radius;
+                
+                if (!IsPointBehindCamera(worldPoint))
+                {
+                    Vector3 screenPoint = mainCamera.WorldToScreenPoint(worldPoint);
+                    float dist = Vector2.Distance(mousePos, new Vector2(screenPoint.x, screenPoint.y));
+                    minDist = Mathf.Min(minDist, dist);
                 }
             }
 

@@ -4,7 +4,7 @@ namespace MeshFreeHandles
 {
     /// <summary>
     /// Handles the dragging logic for rotation operations,
-    /// respecting Local/Global handle space.
+    /// respecting Local/Global handle space and supporting free rotation.
     /// </summary>
     public class RotationDragHandler : IDragHandler
     {
@@ -23,6 +23,10 @@ namespace MeshFreeHandles
         private float pixelsPerIncrement = 30f;  // 30px → one step
         private const float incrementAngle = 15f; // 15° per step for smoother control
 
+        // Free rotation specific
+        private bool isFreeRotation;
+        private Vector2 lastMousePos;
+
         public RotationDragHandler(Camera camera)
         {
             mainCamera = camera;
@@ -32,41 +36,51 @@ namespace MeshFreeHandles
         {
             this.target = target;
             this.draggedAxis = axis;
+            this.isFreeRotation = (axis == 3);
 
-            // 1) Store start rotation and mouse position
+            // Store start rotation and mouse position
             rotationStartOrientation = target.rotation;
             rotationStartMousePos = mousePos;
+            lastMousePos = mousePos;
 
-            // 2) Calculate screen center of rotation
+            // Calculate screen center of rotation
             Vector3 centerWorld = target.position;
             Vector3 centerScreen3D = mainCamera.WorldToScreenPoint(centerWorld);
             centerScreen2D = new Vector2(centerScreen3D.x, centerScreen3D.y);
 
-            // 3) Store the start axis in world coordinates FIRST
-            if (space == HandleSpace.Local)
+            if (isFreeRotation)
             {
-                switch (axis)
-                {
-                    case 0: startAxisWorld = target.right; break;
-                    case 1: startAxisWorld = target.up; break;
-                    case 2: startAxisWorld = target.forward; break;
-                }
+                // Free rotation uses camera-facing axis
+                startAxisWorld = (mainCamera.transform.position - target.position).normalized;
             }
             else
             {
-                // Global axes
-                switch (axis)
+                // Regular axis rotation
+                if (space == HandleSpace.Local)
                 {
-                    case 0: startAxisWorld = Vector3.right; break;
-                    case 1: startAxisWorld = Vector3.up; break;
-                    case 2: startAxisWorld = Vector3.forward; break;
+                    switch (axis)
+                    {
+                        case 0: startAxisWorld = target.right; break;
+                        case 1: startAxisWorld = target.up; break;
+                        case 2: startAxisWorld = target.forward; break;
+                    }
+                }
+                else
+                {
+                    // Global axes
+                    switch (axis)
+                    {
+                        case 0: startAxisWorld = Vector3.right; break;
+                        case 1: startAxisWorld = Vector3.up; break;
+                        case 2: startAxisWorld = Vector3.forward; break;
+                    }
                 }
             }
 
-            // 4) NOW calculate ellipse tangent (after startAxisWorld is set!)
+            // Calculate ellipse tangent for ALL rotations (including free rotation)
             CalculateEllipseTangent(mousePos, axis);
-
-            // 5) Prepare incremental quaternion around the axis
+            
+            // Prepare incremental quaternion around the axis
             incrementQ = Quaternion.AngleAxis(incrementAngle, startAxisWorld);
         }
 
@@ -74,17 +88,25 @@ namespace MeshFreeHandles
         {
             if (target == null || draggedAxis < 0) return;
 
-            // 1) Project mouse delta onto tangent
+            // Use the same tangent-based rotation for all axes (including free rotation)
+            UpdateAxisRotation(mousePos);
+            
+            lastMousePos = mousePos;
+        }
+
+        private void UpdateAxisRotation(Vector2 mousePos)
+        {
+            // Project mouse delta onto tangent
             Vector2 delta = mousePos - rotationStartMousePos;
             float proj = Vector2.Dot(delta, ellipseTangent);
 
-            // 2) Calculate number of steps (can be negative)
+            // Calculate number of steps (can be negative)
             float steps = proj / pixelsPerIncrement;
 
-            // 3) Delta quaternion as "incrementQ ^ steps"
+            // Delta quaternion as "incrementQ ^ steps"
             Quaternion deltaQ = QuaternionPow(incrementQ, steps);
 
-            // 4) Apply to start rotation
+            // Apply to start rotation
             target.rotation = deltaQ * rotationStartOrientation;
         }
 
@@ -92,6 +114,7 @@ namespace MeshFreeHandles
         {
             target = null;
             draggedAxis = -1;
+            isFreeRotation = false;
         }
 
         private void CalculateEllipseTangent(Vector2 clickPos, int axis)
@@ -110,6 +133,10 @@ namespace MeshFreeHandles
             float bestAngle = 0f;
             int samples = 36;
             float radius = GetHandleScale();
+            
+            // Use larger radius for free rotation
+            if (axis == 3)
+                radius *= 1.2f;
 
             for (int i = 0; i < samples; i++)
             {
