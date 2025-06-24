@@ -45,8 +45,8 @@ namespace MeshFreeHandles
             CollectRotationCircle(position, dirY, TranslationHandleUtils.GetAxisColor(1), scale, 1, hoveredAxis, camera);
             CollectRotationCircle(position, dirZ, TranslationHandleUtils.GetAxisColor(2), scale, 2, hoveredAxis, camera);
 
-            // Free rotation sphere
-            CollectCameraFacingCircle(position, scale * 1.2f, camera);
+            // Free rotation sphere (axis index 3)
+            CollectCameraFacingCircle(position, scale * 1.2f, camera, hoveredAxis == 3);
 
             // Only render if we own the batcher
             if (batcher != null && batcher.GetHashCode() == this.batcher.GetHashCode())
@@ -77,8 +77,12 @@ namespace MeshFreeHandles
                 }
             }
 
-            // Free rotation sphere
-            CollectCameraFacingCircle(position, scale * 1.2f, camera);
+            // Free rotation sphere (axis index 3)
+            if (profile.IsAxisEnabled(HandleType.Rotation, 3, HandleSpace.Local) ||
+                profile.IsAxisEnabled(HandleType.Rotation, 3, HandleSpace.Global))
+            {
+                CollectCameraFacingCircle(position, scale * 1.2f, camera, hoveredAxis == 3);
+            }
 
             // Only render if we own the batcher
             if (batcher != null && batcher.GetHashCode() == this.batcher.GetHashCode())
@@ -129,11 +133,16 @@ namespace MeshFreeHandles
             }
         }
 
-        private void CollectCameraFacingCircle(Vector3 center, float radius, Camera camera)
+        private void CollectCameraFacingCircle(Vector3 center, float radius, Camera camera, bool isHovered)
         {
             Vector3 normal = (camera.transform.position - center).normalized;
-            float thickness = baseThickness * 0.8f;
-            Color color = new Color(1f, 1f, 1f, 0.3f);
+            
+            // Dünnerer Ring, aber dicker wenn gehovered
+            float thickness = isHovered ? baseThickness : baseThickness * 0.5f;
+            
+            // Mehr opak wenn gehovered
+            float alpha = isHovered ? 0.6f : 0.2f;
+            Color color = new Color(1f, 1f, 1f, alpha);
             
             // Use the batched circle method
             batcher.AddCircle(center, normal, radius, color, circleSegments, thickness);
