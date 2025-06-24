@@ -66,7 +66,7 @@ namespace MeshFreeHandles
             // Convert thickness from pixels to world units based on camera distance
             float screenToWorldFactor = distanceToCamera * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2f / Screen.height * LINE_THICKNESS_MULTIPLIER;
             
-            int lineCount = Mathf.Max(1, Mathf.RoundToInt(thickness));
+            int lineCount = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.3f)); // Reduziert von 1:1 auf 30%
             float step = thickness / lineCount;
             
             for (int i = 0; i < lineCount; i++)
@@ -124,7 +124,7 @@ namespace MeshFreeHandles
             float distanceToCamera = Vector3.Distance(cam.transform.position, center);
             float screenToWorldFactor = distanceToCamera * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2f / Screen.height * LINE_THICKNESS_MULTIPLIER;
             
-            int lineCount = Mathf.Max(1, Mathf.RoundToInt(thickness));
+            int lineCount = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.3f)); // Auch hier reduziert
             float radiusStep = thickness * screenToWorldFactor / lineCount;
             
             for (int t = 0; t < lineCount; t++)
