@@ -3,21 +3,36 @@ using UnityEngine;
 namespace MeshFreeHandles
 {
     /// <summary>
-    /// Renders rotation handles with circles in either Local or Global space.
+    /// Optimized Rotation Handle Renderer that uses batching
     /// </summary>
     public class RotationHandleRenderer : IProfileAwareRenderer
     {
-        private readonly Color xAxisColor = Color.red;
-        private readonly Color yAxisColor = Color.green;
-        private readonly Color zAxisColor = Color.blue;
         private readonly float axisAlpha = 0.8f;
         private readonly float selectedAlpha = 1f;
         private readonly int circleSegments = 64;
         private readonly float baseThickness = 6f;
         private readonly float hoverThickness = 12f;
 
+        // Batching system
+        private BatchedHandleRenderer batcher;
+
+        // Constructors
+        public RotationHandleRenderer(BatchedHandleRenderer sharedBatcher)
+        {
+            this.batcher = sharedBatcher;
+        }
+
+        public RotationHandleRenderer()
+        {
+            this.batcher = new BatchedHandleRenderer();
+        }
+
         public void Render(Transform target, float scale, int hoveredAxis, HandleSpace handleSpace = HandleSpace.Local)
         {
+            // Only clear if we own the batcher
+            if (batcher != null && batcher.GetHashCode() == this.batcher.GetHashCode())
+                batcher.Clear();
+            
             Vector3 position = target.position;
             Camera camera = Camera.main;
 
@@ -25,25 +40,29 @@ namespace MeshFreeHandles
             Vector3 dirY = (handleSpace == HandleSpace.Local) ? target.up      : Vector3.up;
             Vector3 dirZ = (handleSpace == HandleSpace.Local) ? target.forward : Vector3.forward;
 
-            // X-axis rotation circle
-            DrawRotationCircle(position, dirX, xAxisColor, scale, 0, hoveredAxis, camera);
-            
-            // Y-axis rotation circle
-            DrawRotationCircle(position, dirY, yAxisColor, scale, 1, hoveredAxis, camera);
-            
-            // Z-axis rotation circle
-            DrawRotationCircle(position, dirZ, zAxisColor, scale, 2, hoveredAxis, camera);
+            // Collect all circles
+            CollectRotationCircle(position, dirX, TranslationHandleUtils.GetAxisColor(0), scale, 0, hoveredAxis, camera);
+            CollectRotationCircle(position, dirY, TranslationHandleUtils.GetAxisColor(1), scale, 1, hoveredAxis, camera);
+            CollectRotationCircle(position, dirZ, TranslationHandleUtils.GetAxisColor(2), scale, 2, hoveredAxis, camera);
 
             // Free rotation sphere
-            DrawCameraFacingCircle(position, scale * 1.2f, camera);
+            CollectCameraFacingCircle(position, scale * 1.2f, camera);
+
+            // Only render if we own the batcher
+            if (batcher != null && batcher.GetHashCode() == this.batcher.GetHashCode())
+                batcher.Render();
         }
 
         public void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleProfile profile)
         {
+            // Only clear if we own the batcher
+            if (batcher != null && batcher.GetHashCode() == this.batcher.GetHashCode())
+                batcher.Clear();
+            
             Vector3 position = target.position;
             Camera camera = Camera.main;
 
-            // Render each axis based on profile settings
+            // Collect circles based on profile
             for (int axis = 0; axis < 3; axis++)
             {
                 Color color = TranslationHandleUtils.GetAxisColor(axis);
@@ -53,20 +72,24 @@ namespace MeshFreeHandles
                     if (profile.IsAxisEnabled(HandleType.Rotation, axis, space))
                     {
                         Vector3 normal = TranslationHandleUtils.GetAxisDirection(target, axis, space);
-                        DrawRotationCircle(position, normal, color, scale, axis, hoveredAxis, camera);
+                        CollectRotationCircle(position, normal, color, scale, axis, hoveredAxis, camera);
                     }
                 }
             }
 
             // Free rotation sphere
-            DrawCameraFacingCircle(position, scale * 1.2f, camera);
+            CollectCameraFacingCircle(position, scale * 1.2f, camera);
+
+            // Only render if we own the batcher
+            if (batcher != null && batcher.GetHashCode() == this.batcher.GetHashCode())
+                batcher.Render();
         }
 
-        private void DrawRotationCircle(Vector3 center, Vector3 normal, Color color, float radius,
-                                        int axisIndex, int hoveredAxis, Camera camera)
+        private void CollectRotationCircle(Vector3 center, Vector3 normal, Color color, float radius,
+                                         int axisIndex, int hoveredAxis, Camera camera)
         {
             float alpha = (hoveredAxis == axisIndex) ? selectedAlpha : axisAlpha;
-            Color finalColor = new Color(color.r, color.g, color.b, alpha);
+            Color baseColor = new Color(color.r, color.g, color.b, alpha);
 
             // Skip if circle is edge-on
             Vector3 toCamera = (camera.transform.position - center).normalized;
@@ -82,7 +105,7 @@ namespace MeshFreeHandles
 
             float thickness = (hoveredAxis == axisIndex) ? hoverThickness : baseThickness;
 
-            // Draw circle segments using ThickLineHelper
+            // Collect all circle segments at once
             for (int i = 0; i < circleSegments; i++)
             {
                 float angleA = (i / (float)circleSegments) * 2f * Mathf.PI;
@@ -99,52 +122,21 @@ namespace MeshFreeHandles
 
                 // Fade based on angle to camera
                 float fade = Mathf.Clamp01((dotMid + 0.1f) / 0.2f);
-                Color segmentColor = new Color(finalColor.r, finalColor.g, finalColor.b, finalColor.a * fade);
+                Color segmentColor = new Color(baseColor.r, baseColor.g, baseColor.b, baseColor.a * fade);
                 
-                // Use ThickLineHelper for consistent thickness
-                ThickLineHelper.DrawThickLine(pA, pB, segmentColor, thickness);
+                // Add to batch
+                batcher.AddThickLine(pA, pB, segmentColor, thickness);
             }
         }
 
-        private void DrawCameraFacingCircle(Vector3 center, float radius, Camera camera)
+        private void CollectCameraFacingCircle(Vector3 center, float radius, Camera camera)
         {
             Vector3 normal = (camera.transform.position - center).normalized;
             float thickness = baseThickness * 0.8f;
             Color color = new Color(1f, 1f, 1f, 0.3f);
-            ThickLineHelper.DrawThickCircle(center, normal, radius, color, circleSegments, thickness);
-        }
-
-        private Vector3 GetLocalAxisDirection(Transform target, int axis)
-        {
-            switch (axis)
-            {
-                case 0: return target.right;
-                case 1: return target.up;
-                case 2: return target.forward;
-                default: return Vector3.zero;
-            }
-        }
-
-        private Vector3 GetGlobalAxisDirection(int axis)
-        {
-            switch (axis)
-            {
-                case 0: return Vector3.right;
-                case 1: return Vector3.up;
-                case 2: return Vector3.forward;
-                default: return Vector3.zero;
-            }
-        }
-
-        private Color GetAxisColor(int axis)
-        {
-            switch (axis)
-            {
-                case 0: return Color.red;
-                case 1: return Color.green;
-                case 2: return Color.blue;
-                default: return Color.white;
-            }
+            
+            // Use the batched circle method
+            batcher.AddCircle(center, normal, radius, color, circleSegments, thickness);
         }
     }
 }
