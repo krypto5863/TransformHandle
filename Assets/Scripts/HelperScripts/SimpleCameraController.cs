@@ -11,99 +11,167 @@ namespace MeshFreeHandles
         [Header("Movement Settings")]
         [SerializeField] private float moveSpeed = 10f;
         [SerializeField] private float shiftSpeedMultiplier = 3f;
-        [SerializeField] private float smoothTime = 0.1f;
-
+        [SerializeField] private float acceleration = 20f;
+        [SerializeField] private float deceleration = 30f;
+        [SerializeField] private float maxSpeed = 50f;
+        
         [Header("Rotation Settings")]
         [SerializeField] private float rotationSpeed = 3f;
+        [SerializeField] private float rotationSmoothTime = 0.05f;
         [SerializeField] private bool invertY = false;
-
+        
         [Header("Zoom Settings")]
         [SerializeField] private float scrollSpeed = 10f;
-
+        [SerializeField] private float scrollAcceleration = 50f;
+        
         private Camera cam;
-        private Vector3 velocity;
-        private Vector3 targetPosition;
-        private float currentSpeed;
-
+        private Vector3 currentVelocity;
+        private Vector3 targetVelocity;
+        private Vector2 rotationVelocity;
+        private Vector2 currentRotation;
+        private float scrollVelocity;
+        
         void Awake()
         {
             cam = GetComponent<Camera>();
             if (cam == null)
                 cam = Camera.main;
-
-            targetPosition = transform.position;
+                
+            // Initialize rotation from current transform
+            currentRotation.x = transform.eulerAngles.x;
+            currentRotation.y = transform.eulerAngles.y;
         }
-
+        
         void Update()
         {
             HandleMovement();
             HandleRotation();
             HandleScroll();
         }
-
+        
         private void HandleMovement()
         {
             if (Mouse.current == null || Keyboard.current == null) return;
             
             // Only move when right mouse button is held
-            if (!Mouse.current.rightButton.isPressed) return;
-
-            Vector3 moveDirection = Vector3.zero;
-
-            // Get input
-            if (Keyboard.current.wKey.isPressed) moveDirection += transform.forward;
-            if (Keyboard.current.sKey.isPressed) moveDirection -= transform.forward;
-            if (Keyboard.current.aKey.isPressed) moveDirection -= transform.right;
-            if (Keyboard.current.dKey.isPressed) moveDirection += transform.right;
-            if (Keyboard.current.qKey.isPressed) moveDirection -= transform.up;
-            if (Keyboard.current.eKey.isPressed) moveDirection += transform.up;
-
-            // Speed modifier
-            currentSpeed = moveSpeed;
-            if (Keyboard.current.shiftKey.isPressed)
-                currentSpeed *= shiftSpeedMultiplier;
-
-            // Apply movement
-            if (moveDirection.magnitude > 0)
+            bool isRightMousePressed = Mouse.current.rightButton.isPressed;
+            
+            Vector3 inputDirection = Vector3.zero;
+            
+            if (isRightMousePressed)
             {
-                targetPosition += moveDirection.normalized * currentSpeed * Time.deltaTime;
+                // Get input
+                if (Keyboard.current.wKey.isPressed) inputDirection += Vector3.forward;
+                if (Keyboard.current.sKey.isPressed) inputDirection -= Vector3.forward;
+                if (Keyboard.current.aKey.isPressed) inputDirection -= Vector3.right;
+                if (Keyboard.current.dKey.isPressed) inputDirection += Vector3.right;
+                if (Keyboard.current.qKey.isPressed) inputDirection -= Vector3.up;
+                if (Keyboard.current.eKey.isPressed) inputDirection += Vector3.up;
+                
+                // Normalize input
+                if (inputDirection.magnitude > 1f)
+                    inputDirection.Normalize();
             }
-
-            // Smooth movement
-            transform.position = Vector3.SmoothDamp(transform.position, targetPosition, ref velocity, smoothTime);
+            
+            // Speed modifier
+            float targetSpeed = moveSpeed;
+            if (Keyboard.current.shiftKey.isPressed)
+                targetSpeed *= shiftSpeedMultiplier;
+            
+            // Calculate target velocity in world space
+            if (inputDirection.magnitude > 0.01f)
+            {
+                targetVelocity = transform.TransformDirection(inputDirection) * targetSpeed;
+                targetVelocity = Vector3.ClampMagnitude(targetVelocity, maxSpeed);
+            }
+            else
+            {
+                targetVelocity = Vector3.zero;
+            }
+            
+            // Smooth acceleration/deceleration
+            float smoothingFactor = inputDirection.magnitude > 0.01f ? acceleration : deceleration;
+            currentVelocity = Vector3.Lerp(currentVelocity, targetVelocity, smoothingFactor * Time.deltaTime);
+            
+            // Apply movement
+            if (currentVelocity.magnitude > 0.01f)
+            {
+                transform.position += currentVelocity * Time.deltaTime;
+            }
         }
-
+        
         private void HandleRotation()
         {
             if (Mouse.current == null || !Mouse.current.rightButton.isPressed) return;
-
+            
             Vector2 mouseDelta = Mouse.current.delta.ReadValue();
-
+            
             if (mouseDelta.magnitude > 0)
             {
-                // Horizontal rotation (Y axis)
-                transform.Rotate(Vector3.up, mouseDelta.x * rotationSpeed, Space.World);
-
-                // Vertical rotation (X axis)
-                float verticalRotation = invertY ? mouseDelta.y : -mouseDelta.y;
-                transform.Rotate(transform.right, verticalRotation * rotationSpeed, Space.World);
-
-                // Update target position to current position when rotating
-                targetPosition = transform.position;
+                // Calculate target rotation
+                float yaw = mouseDelta.x * rotationSpeed;
+                float pitch = (invertY ? mouseDelta.y : -mouseDelta.y) * rotationSpeed;
+                
+                // Smooth rotation
+                rotationVelocity = Vector2.Lerp(rotationVelocity, new Vector2(pitch, yaw), 
+                    Time.deltaTime / rotationSmoothTime);
+                
+                currentRotation.x += rotationVelocity.x;
+                currentRotation.y += rotationVelocity.y;
+                
+                // Clamp pitch to prevent flipping
+                currentRotation.x = Mathf.Clamp(currentRotation.x, -89f, 89f);
+                
+                // Apply rotation
+                transform.rotation = Quaternion.Euler(currentRotation.x, currentRotation.y, 0f);
+            }
+            else
+            {
+                // Dampen rotation velocity when not moving mouse
+                rotationVelocity = Vector2.Lerp(rotationVelocity, Vector2.zero, 
+                    Time.deltaTime / rotationSmoothTime);
             }
         }
-
+        
         private void HandleScroll()
         {
             if (Mouse.current == null) return;
-
-            float scrollDelta = Mouse.current.scroll.y.ReadValue();
-            if (Mathf.Abs(scrollDelta) > 0.01f)
+            
+            float scrollInput = Mouse.current.scroll.y.ReadValue();
+            
+            if (Mathf.Abs(scrollInput) > 0.01f)
             {
-                // Move forward/backward based on scroll
-                Vector3 scrollMovement = transform.forward * (scrollDelta * scrollSpeed * 0.01f);
-                targetPosition += scrollMovement;
+                // Accelerate scroll velocity
+                scrollVelocity += scrollInput * scrollSpeed * Time.deltaTime;
+                scrollVelocity = Mathf.Clamp(scrollVelocity, -maxSpeed, maxSpeed);
             }
+            else
+            {
+                // Decelerate when not scrolling
+                scrollVelocity = Mathf.Lerp(scrollVelocity, 0f, scrollAcceleration * Time.deltaTime);
+            }
+            
+            // Apply scroll movement
+            if (Mathf.Abs(scrollVelocity) > 0.01f)
+            {
+                transform.position += transform.forward * scrollVelocity * Time.deltaTime;
+            }
+        }
+        
+        // Public method to reset velocity (useful when teleporting)
+        public void ResetVelocity()
+        {
+            currentVelocity = Vector3.zero;
+            targetVelocity = Vector3.zero;
+            scrollVelocity = 0f;
+            rotationVelocity = Vector2.zero;
+        }
+        
+        // Public method to set position without interpolation
+        public void SetPosition(Vector3 newPosition)
+        {
+            transform.position = newPosition;
+            ResetVelocity();
         }
     }
 }
