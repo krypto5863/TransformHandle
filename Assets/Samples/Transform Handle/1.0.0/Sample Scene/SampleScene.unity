@@ -305,7 +305,7 @@ MonoBehaviour:
   acceleration: 20
   deceleration: 30
   maxSpeed: 50
-  rotationSpeed: 0.3
+  rotationSpeed: 3
   rotationSmoothTime: 0.05
   invertY: 0
   scrollSpeed: 10
@@ -373,7 +373,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22e90c12309feac43af4b79bf5888af9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  translationKey: 37
+  translationKey: 119
   onSetTranslation:
     m_PersistentCalls:
       m_Calls:
@@ -389,7 +389,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  rotationKey: 19
+  rotationKey: 101
   onSetRotation:
     m_PersistentCalls:
       m_Calls:
@@ -405,7 +405,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  scaleKey: 32
+  scaleKey: 114
   onSetScale:
     m_PersistentCalls:
       m_Calls:
@@ -421,7 +421,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  handleSpaceToggleKey: 38
+  handleSpaceToggleKey: 120
   onToggleHandleSpace:
     m_PersistentCalls:
       m_Calls:

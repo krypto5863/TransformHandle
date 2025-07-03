@@ -52,6 +52,7 @@ namespace MeshFreeHandles
             bool mousePressed = Input.GetMouseButtonDown(0);
             bool mouseReleased = Input.GetMouseButtonUp(0);
 
+
             if (!IsDragging)
             {
                 // Update hover state with space
