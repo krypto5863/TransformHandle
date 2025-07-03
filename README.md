@@ -22,15 +22,41 @@ A high-performance runtime transform handle system for Unity, inspired by Unity'
 
 ## 📦 Installation
 
-### Option 1: Unity Package (Recommended)
+## 📦 Installation
+
+### Option 1: Package Manager (Recommended)
+1. Open Unity Package Manager (Window → Package Manager)
+2. Click the **+** button → **Add package from git URL**
+3. Enter: `https://github.com/BjoernGit/TransformHandle.git?path=Packages/com.bjoerngit.transformhandle`
+4. Click **Add** - Unity will download and import automatically
+5. Done! No dependencies required
+
+### Option 2: Manual Installation via manifest.json
+Add to your `Packages/manifest.json`:
+```json
+{
+  "dependencies": {
+    "com.bjoerngit.transformhandle": "https://github.com/BjoernGit/TransformHandle.git?path=Packages/com.bjoerngit.transformhandle"
+  }
+}
+```
+
+### Option 3: Unity Package 
 1. Download the latest `MeshFreeHandles_v1.0.0.unitypackage` from [Releases](https://github.com/BjoernGit/TransformHandle/releases)
 2. Import into Unity: Assets → Import Package → Custom Package
 3. Done! No dependencies required
 
-### Option 2: Manual Installation
+### Option 4: Manual Installation
 1. Clone or download this repository
 2. Copy the `Assets/Scripts/MeshFreeHandles` folder into your Unity project
 3. That's it - the system initializes automatically
+
+Import Sample Scene (Optional)
+
+1. In Package Manager, select Transform Handle
+2. Switch to the Samples tab
+3. Click Import next to "Sample Scene"
+4. Find the scene in `Assets/Samples/Transform Handle/1.0.0/Sample Scene/`
 
 ## 🚀 Quick Start
 
