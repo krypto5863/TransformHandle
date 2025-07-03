@@ -1,0 +1,17 @@
+{
+    "name": "TransformHandle.Samples",
+    "rootNamespace": "TransformHandle.Samples",
+    "references": [
+        "MeshFreeTransformHandles",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
