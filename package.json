@@ -1,0 +1,23 @@
+{
+  "name": "com.bjoerngit.transformhandle",
+  "version": "1.0.0",
+  "displayName": "Transform Handle",
+  "description": "Runtime transform handles for Unity without mesh generation",
+  "unity": "2020.3",
+  "unityRelease": "0f1",
+  "documentationUrl": "https://github.com/BjoernGit/TransformHandle",
+  "changelogUrl": "https://github.com/BjoernGit/TransformHandle/releases",
+  "licensesUrl": "https://github.com/BjoernGit/TransformHandle/blob/main/LICENSE",
+  "dependencies": {},
+  "keywords": [
+    "handles",
+    "transform",
+    "gizmos",
+    "runtime",
+    "editor"
+  ],
+  "author": {
+    "name": "Bjoern",
+    "url": "https://github.com/BjoernGit"
+  }
+}
