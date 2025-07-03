@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 using System;
 
 namespace MeshFreeHandles
@@ -11,7 +10,7 @@ namespace MeshFreeHandles
     public class SelectionManager : MonoBehaviour
     {
         private static SelectionManager instance;
-        
+       
         public static SelectionManager Instance
         {
             get
@@ -19,7 +18,7 @@ namespace MeshFreeHandles
                 if (instance == null)
                 {
                     instance = FindFirstObjectByType<SelectionManager>();
-                    
+                   
                     if (instance == null)
                     {
                         GameObject go = new GameObject("Selection Manager");
@@ -30,16 +29,14 @@ namespace MeshFreeHandles
                 return instance;
             }
         }
-
+        
         [Header("Selection Settings")]
         [SerializeField] private LayerMask selectableLayerMask = -1;
         [SerializeField] private float maxSelectionDistance = 1000f;
-
         private Camera mainCamera;
         private Transform currentSelection;
-
         public event Action<Transform> OnSelectionChanged;
-
+        
         void Awake()
         {
             if (instance != null && instance != this)
@@ -47,13 +44,12 @@ namespace MeshFreeHandles
                 Destroy(gameObject);
                 return;
             }
-            
+           
             instance = this;
             DontDestroyOnLoad(gameObject);
-
             mainCamera = Camera.main;
         }
-
+        
         void Update()
         {
             if (mainCamera == null)
@@ -61,20 +57,20 @@ namespace MeshFreeHandles
                 mainCamera = Camera.main;
                 if (mainCamera == null) return;
             }
-
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            
+            if (Input.GetMouseButtonDown(0))
             {
                 // Skip if clicking on UI
                 if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
                     return;
-
+                
                 // Skip if hovering over a handle
                 if (TransformHandleManager.Instance.IsHovering)
                     return;
-
-                Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+                
+                Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
                 RaycastHit hit;
-
+                
                 if (Physics.Raycast(ray, out hit, maxSelectionDistance, selectableLayerMask))
                 {
                     // Hit an object - select it
@@ -91,7 +87,7 @@ namespace MeshFreeHandles
                 }
             }
         }
-
+        
         void OnDestroy()
         {
             if (instance == this)
