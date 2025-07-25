@@ -13,12 +13,12 @@ namespace MeshFreeHandles
         private IHandleRenderer scaleRenderer;
         private Material lineMaterial;
 
-        public HandleRenderer()
+        public HandleRenderer(Camera camera)
         {
             CreateMaterial();
-            translationRenderer = new TranslationHandleRenderer();
-            rotationRenderer = new RotationHandleRenderer();
-            scaleRenderer = new ScaleHandleRenderer();
+            translationRenderer = new TranslationHandleRenderer(camera);
+            rotationRenderer = new RotationHandleRenderer(camera);
+            scaleRenderer = new ScaleHandleRenderer(camera);
         }
 
         private void CreateMaterial()
