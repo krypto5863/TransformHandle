@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SocialPlatforms;
 
 namespace MeshFreeHandles
 {
@@ -7,6 +8,8 @@ namespace MeshFreeHandles
     /// </summary>
     public class TranslationHandleRenderer : IProfileAwareRenderer
     {
+
+
         // Public constants
         public const float PLANE_SIZE_MULTIPLIER = 0.3f;
 
@@ -23,6 +26,8 @@ namespace MeshFreeHandles
         // Batching system
         private BatchedHandleRenderer batcher;
 
+        public Camera LocalCamera {get; private set;}
+
         // Constructors
         public TranslationHandleRenderer(BatchedHandleRenderer sharedBatcher)
         {
@@ -31,7 +36,7 @@ namespace MeshFreeHandles
 
         public TranslationHandleRenderer()
         {
-            this.batcher = new BatchedHandleRenderer();
+            this.batcher = new BatchedHandleRenderer(Camera.main);
         }
 
         public void Render(Transform target, float scale, int hoveredAxis, HandleSpace handleSpace = HandleSpace.Local)

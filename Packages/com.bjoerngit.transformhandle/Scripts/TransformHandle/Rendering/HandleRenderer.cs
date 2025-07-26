@@ -12,13 +12,22 @@ namespace MeshFreeHandles
         private IHandleRenderer rotationRenderer;
         private IHandleRenderer scaleRenderer;
         private Material lineMaterial;
+        private BatchedHandleRenderer sharedBatcher;
 
         public HandleRenderer(Camera camera)
         {
             CreateMaterial();
-            translationRenderer = new TranslationHandleRenderer(camera);
-            rotationRenderer = new RotationHandleRenderer(camera);
-            scaleRenderer = new ScaleHandleRenderer(camera);
+
+            sharedBatcher = new BatchedHandleRenderer(camera);
+
+            translationRenderer = new TranslationHandleRenderer(sharedBatcher);
+            rotationRenderer = new RotationHandleRenderer(sharedBatcher);
+            scaleRenderer = new ScaleHandleRenderer(sharedBatcher);
+        }
+
+        public void SetCamera(Camera camera)
+        {
+            sharedBatcher?.SetCamera(camera);
         }
 
         private void CreateMaterial()
@@ -60,28 +69,33 @@ namespace MeshFreeHandles
         public void RenderWithProfile(Transform target, float scale, int hoveredAxis, HandleType handleType, HandleProfile profile)
         {
             if (target == null || lineMaterial == null || profile == null) return;
-
             if (!profile.HasAnyAxisEnabled(handleType)) return;
 
             IHandleRenderer renderer = GetRenderer(handleType);
             if (renderer == null) return;
 
+            // Prüfe ob Batcher eine gültige Camera hat
+            if (sharedBatcher?.HasValidCamera() == false)
+            {
+                sharedBatcher.SetCamera(Camera.main);
+            }
+
             lineMaterial.SetPass(0);
+
             GL.PushMatrix();
-            GL.MultMatrix(Matrix4x4.identity);
-
-            // Delegate to specialized renderer with profile
-            if (renderer is IProfileAwareRenderer profileRenderer)
+            try
             {
-                profileRenderer.RenderWithProfile(target, scale, hoveredAxis, profile);
-            }
-            else
-            {
-                // Fallback - shouldn't happen if all renderers implement IProfileAwareRenderer
-                Debug.LogWarning($"{renderer.GetType().Name} doesn't support profile rendering");
-            }
+                GL.MultMatrix(Matrix4x4.identity);
 
-            GL.PopMatrix();
+                if (renderer is IProfileAwareRenderer profileRenderer)
+                {
+                    profileRenderer.RenderWithProfile(target, scale, hoveredAxis, profile);
+                }
+            }
+            finally
+            {
+                GL.PopMatrix(); // IMMER ausführen!
+            }
         }
 
         private IHandleRenderer GetRenderer(HandleType type)

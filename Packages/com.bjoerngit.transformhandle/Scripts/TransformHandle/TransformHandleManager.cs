@@ -9,7 +9,7 @@ namespace MeshFreeHandles
     public class TransformHandleManager : MonoBehaviour
     {
         private static TransformHandleManager instance;
-        
+
         /// <summary>
         /// Global instance of the Transform Handle Manager
         /// </summary>
@@ -20,7 +20,7 @@ namespace MeshFreeHandles
                 if (instance == null)
                 {
                     instance = FindFirstObjectByType<TransformHandleManager>();
-                    
+
                     if (instance == null)
                     {
                         GameObject go = new GameObject("Transform Handle Manager");
@@ -49,7 +49,6 @@ namespace MeshFreeHandles
         [SerializeField] private HandleSpace handleSpace = HandleSpace.Local;
 
         // Components
-        private Camera mainCamera;
         private HandleInteraction interaction;
         private HandleRenderer handleRenderer;
         private HandleProfile activeProfile;
@@ -61,6 +60,32 @@ namespace MeshFreeHandles
         public event Action<Transform> OnTransformModified;
 
         // Properties
+
+        [Header("Camera Settings")]
+        [Tooltip("The camera used for handle rendering and interaction. If null, Camera.main is used.")]
+        [SerializeField] private Camera handleCamera;
+        /// <summary>
+        /// Gets or sets the camera used for handles. Falls back to Camera.main if null.
+        /// </summary>
+        public Camera HandleCamera
+        {
+            get
+            {
+                if (handleCamera != null && !handleCamera)
+                    handleCamera = null;
+
+                return handleCamera ?? Camera.main;
+            }
+            set
+            {
+                if (handleCamera != value)
+                {
+                    handleCamera = value;
+                    UpdateCameraReferences();
+                }
+            }
+        }
+
         public Transform CurrentTarget => targetTransform;
         public HandleType CurrentHandleType => handleType;
         public HandleSpace CurrentHandleSpace => handleSpace;
@@ -77,19 +102,27 @@ namespace MeshFreeHandles
                 Destroy(gameObject);
                 return;
             }
-            
+
             instance = this;
             DontDestroyOnLoad(gameObject);
 
             // Initialize components
-            mainCamera = Camera.main;
-            interaction = new HandleInteraction(mainCamera);
-            handleRenderer = new HandleRenderer();
+            Camera cam = HandleCamera;
+            interaction = new HandleInteraction(cam);
+            handleRenderer = new HandleRenderer(cam);
         }
 
         void Update()
         {
-            if (targetTransform == null || mainCamera == null) return;
+            // Check if camera was destroyed
+            if (handleCamera != null && !handleCamera)
+            {
+                // Camera was destroyed, reset to null
+                handleCamera = null;
+                UpdateCameraReferences();
+            }
+
+            if (targetTransform == null || handleCamera == null) return;
 
             // Update interaction target every frame
             interaction.UpdateTarget(targetTransform);
@@ -116,6 +149,16 @@ namespace MeshFreeHandles
             }
         }
 
+        private void UpdateCameraReferences()
+        {
+            Debug.Log($"UpdateCameraReferences called! New Camera: {HandleCamera?.name}");
+
+            interaction = new HandleInteraction(HandleCamera);
+            handleRenderer?.Cleanup();
+            handleRenderer = new HandleRenderer(HandleCamera);
+
+        }
+
         /// <summary>
         /// Sets the target transform to manipulate
         /// </summary>
@@ -124,20 +167,20 @@ namespace MeshFreeHandles
             if (targetTransform == target) return;
 
             targetTransform = target;
-            
+
             // Check for custom profile on target
             if (target != null)
             {
                 var profileHolder = target.GetComponent<HandleProfileHolder>();
-                activeProfile = (profileHolder != null && profileHolder.HasProfile) 
-                    ? profileHolder.Profile 
+                activeProfile = (profileHolder != null && profileHolder.HasProfile)
+                    ? profileHolder.Profile
                     : null;
             }
             else
             {
                 activeProfile = null;
             }
-            
+
             OnTargetChanged?.Invoke(target);
         }
 
@@ -157,8 +200,8 @@ namespace MeshFreeHandles
             if (targetTransform != null)
             {
                 var profileHolder = targetTransform.GetComponent<HandleProfileHolder>();
-                activeProfile = (profileHolder != null && profileHolder.HasProfile) 
-                    ? profileHolder.Profile 
+                activeProfile = (profileHolder != null && profileHolder.HasProfile)
+                    ? profileHolder.Profile
                     : null;
             }
         }
@@ -211,7 +254,7 @@ namespace MeshFreeHandles
             handleSpace = (handleSpace == HandleSpace.Local)
                 ? HandleSpace.Global
                 : HandleSpace.Local;
-            
+
             OnHandleSpaceChanged?.Invoke(handleSpace);
         }
 
@@ -233,13 +276,13 @@ namespace MeshFreeHandles
 
         void OnRenderObject()
         {
-            if (targetTransform == null || mainCamera == null) return;
+            if (targetTransform == null || HandleCamera == null) return;
 
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             if (UnityEditor.SceneView.currentDrawingSceneView != null) return;
-            #endif
+#endif
 
-            Vector3 vp = mainCamera.WorldToViewportPoint(targetTransform.position);
+            Vector3 vp = HandleCamera.WorldToViewportPoint(targetTransform.position);
             if (vp.z < 0f) return;
 
             float scale = GetHandleScale();
@@ -269,17 +312,17 @@ namespace MeshFreeHandles
 
         private float GetHandleScale()
         {
-            if (!maintainConstantScreenSize || mainCamera == null || targetTransform == null)
+            if (!maintainConstantScreenSize || HandleCamera == null || targetTransform == null)
                 return handleSize;
 
-            float distance = Vector3.Distance(mainCamera.transform.position, targetTransform.position);
+            float distance = Vector3.Distance(HandleCamera.transform.position, targetTransform.position);
             return distance * screenSizeMultiplier * handleSize;
         }
 
         void OnDestroy()
         {
             handleRenderer?.Cleanup();
-            
+
             if (instance == this)
             {
                 instance = null;

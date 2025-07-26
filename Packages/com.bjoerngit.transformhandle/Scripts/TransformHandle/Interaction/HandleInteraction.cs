@@ -8,7 +8,7 @@ namespace MeshFreeHandles
     /// </summary>
     public class HandleInteraction
     {
-        private Camera mainCamera;
+        private Camera currentCamera;
         private Transform target;
 
         // Sub-components
@@ -29,7 +29,7 @@ namespace MeshFreeHandles
 
         public HandleInteraction(Camera camera)
         {
-            mainCamera = camera;
+            currentCamera = camera;
             hoverDetector = new HandleHoverDetector(camera);
             translationHandler = new TranslationDragHandler(camera);
             rotationHandler = new RotationDragHandler(camera);
@@ -41,12 +41,17 @@ namespace MeshFreeHandles
             target = newTarget;
         }
 
+        public void SetCamera(Camera camera)
+        {
+            currentCamera = camera;
+        }
+
         /// <summary>
         /// Updates hover and drag state, taking into account handle type and space.
         /// </summary>
         public void Update(float handleScale, HandleType handleType, HandleSpace handleSpace)
         {
-            if (target == null || mainCamera == null) return;
+            if (target == null || currentCamera == null) return;
 
             Vector2 mousePos = Input.mousePosition;
             bool mousePressed = Input.GetMouseButtonDown(0);
@@ -78,7 +83,7 @@ namespace MeshFreeHandles
         /// </summary>
         public void UpdateWithProfile(float handleScale, HandleType handleType, HandleProfile profile)
         {
-            if (target == null || mainCamera == null || profile == null) return;
+            if (target == null || currentCamera == null || profile == null) return;
 
             currentProfile = profile;
 

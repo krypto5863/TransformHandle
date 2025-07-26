@@ -8,18 +8,38 @@ namespace MeshFreeHandles
     /// </summary>
     public class BatchedHandleRenderer
     {
+        private Camera renderCamera;
         // Constants
         public const float LINE_THICKNESS_MULTIPLIER = 0.2f; // Controls visual thickness of lines (0.2 = 20% of calculated thickness)
-        
+
         // Geometry buffers per primitive type
         private List<Vector3> lineVertices = new List<Vector3>();
         private List<Color> lineColors = new List<Color>();
-        
+
         private List<Vector3> triangleVertices = new List<Vector3>();
         private List<Color> triangleColors = new List<Color>();
-        
+
         private List<Vector3> quadVertices = new List<Vector3>();
         private List<Color> quadColors = new List<Color>();
+
+        public BatchedHandleRenderer(Camera camera)
+        {
+            this.renderCamera = camera;
+        }
+
+        public bool HasValidCamera()
+        {
+            return renderCamera != null && renderCamera;
+        }
+        
+        public BatchedHandleRenderer() : this(Camera.main)
+        {
+        }
+
+        public void SetCamera(Camera camera)
+        {
+            this.renderCamera = camera;
+        }
 
         /// <summary>
         /// Clear all buffers for new frame
@@ -50,30 +70,36 @@ namespace MeshFreeHandles
         /// </summary>
         public void AddThickLine(Vector3 start, Vector3 end, Color color, float thickness = 3f)
         {
+            if (renderCamera == null || !renderCamera)
+            {
+                renderCamera = Camera.main; // Fallback
+                if (renderCamera == null) return;
+            }
+
             Vector3 direction = (end - start).normalized;
-            Camera cam = Camera.main;
+            Camera cam = renderCamera;
             Vector3 perpendicular = Vector3.Cross(direction, cam.transform.forward).normalized;
-            
+
             if (perpendicular.magnitude < 0.1f)
             {
                 perpendicular = Vector3.Cross(direction, Vector3.up).normalized;
             }
-            
+
             // Calculate screen-space thickness
             Vector3 midPoint = (start + end) * 0.5f;
             float distanceToCamera = Vector3.Distance(cam.transform.position, midPoint);
-            
+
             // Convert thickness from pixels to world units based on camera distance
             float screenToWorldFactor = distanceToCamera * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2f / Screen.height * LINE_THICKNESS_MULTIPLIER;
-            
+
             int lineCount = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.3f)); // Reduziert von 1:1 auf 30%
             float step = thickness / lineCount;
-            
+
             for (int i = 0; i < lineCount; i++)
             {
                 float offset = (i - (lineCount - 1) * 0.5f) * step * screenToWorldFactor;
                 Vector3 offsetVector = perpendicular * offset;
-                
+
                 AddLine(start + offsetVector, end + offsetVector, color);
             }
         }
@@ -109,7 +135,7 @@ namespace MeshFreeHandles
         /// <summary>
         /// Add a circle to the batch
         /// </summary>
-        public void AddCircle(Vector3 center, Vector3 normal, float radius, Color color, 
+        public void AddCircle(Vector3 center, Vector3 normal, float radius, Color color,
                              int segments = 64, float thickness = 3f)
         {
             Vector3 tangent1 = Vector3.Cross(normal, Vector3.up).normalized;
@@ -118,27 +144,27 @@ namespace MeshFreeHandles
                 tangent1 = Vector3.Cross(normal, Vector3.right).normalized;
             }
             Vector3 tangent2 = Vector3.Cross(normal, tangent1).normalized;
-            
+
             // Calculate screen-space thickness for circles
             Camera cam = Camera.main;
             float distanceToCamera = Vector3.Distance(cam.transform.position, center);
             float screenToWorldFactor = distanceToCamera * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2f / Screen.height * LINE_THICKNESS_MULTIPLIER;
-            
+
             int lineCount = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.3f)); // Auch hier reduziert
             float radiusStep = thickness * screenToWorldFactor / lineCount;
-            
+
             for (int t = 0; t < lineCount; t++)
             {
                 float currentRadius = radius + (t - (lineCount - 1) * 0.5f) * radiusStep;
-                
+
                 for (int i = 0; i < segments; i++)
                 {
                     float angle1 = (i / (float)segments) * 2 * Mathf.PI;
                     float angle2 = ((i + 1) / (float)segments) * 2 * Mathf.PI;
-                    
+
                     Vector3 point1 = center + (tangent1 * Mathf.Cos(angle1) + tangent2 * Mathf.Sin(angle1)) * currentRadius;
                     Vector3 point2 = center + (tangent1 * Mathf.Cos(angle2) + tangent2 * Mathf.Sin(angle2)) * currentRadius;
-                    
+
                     AddLine(point1, point2, color);
                 }
             }
@@ -172,7 +198,7 @@ namespace MeshFreeHandles
                 int i2 = (i + 1) % 4;
                 AddTriangle(tip, basePoints[i1], basePoints[i2], color);
             }
-            
+
             // Base quad
             AddTriangle(basePoints[0], basePoints[1], basePoints[2], color);
             AddTriangle(basePoints[1], basePoints[3], basePoints[2], color);
@@ -209,21 +235,21 @@ namespace MeshFreeHandles
             // Front face
             AddTriangle(corners[0], corners[1], corners[2], color);
             AddTriangle(corners[1], corners[3], corners[2], color);
-            
+
             // Back face
             AddTriangle(corners[5], corners[4], corners[6], color);
             AddTriangle(corners[5], corners[6], corners[7], color);
-            
+
             // Other faces...
             AddTriangle(corners[4], corners[0], corners[2], color);
             AddTriangle(corners[4], corners[2], corners[6], color);
-            
+
             AddTriangle(corners[1], corners[5], corners[7], color);
             AddTriangle(corners[1], corners[7], corners[3], color);
-            
+
             AddTriangle(corners[4], corners[5], corners[1], color);
             AddTriangle(corners[4], corners[1], corners[0], color);
-            
+
             AddTriangle(corners[2], corners[3], corners[7], color);
             AddTriangle(corners[2], corners[7], corners[6], color);
 
@@ -234,13 +260,13 @@ namespace MeshFreeHandles
             AddLine(corners[1], corners[3], edgeColor);
             AddLine(corners[3], corners[2], edgeColor);
             AddLine(corners[2], corners[0], edgeColor);
-            
+
             // Top face
             AddLine(corners[4], corners[5], edgeColor);
             AddLine(corners[5], corners[7], edgeColor);
             AddLine(corners[7], corners[6], edgeColor);
             AddLine(corners[6], corners[4], edgeColor);
-            
+
             // Vertical edges
             AddLine(corners[0], corners[4], edgeColor);
             AddLine(corners[1], corners[5], edgeColor);
