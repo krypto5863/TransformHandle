@@ -151,12 +151,9 @@ namespace MeshFreeHandles
 
         private void UpdateCameraReferences()
         {
-            Debug.Log($"UpdateCameraReferences called! New Camera: {HandleCamera?.name}");
-
             interaction = new HandleInteraction(HandleCamera);
             handleRenderer?.Cleanup();
             handleRenderer = new HandleRenderer(HandleCamera);
-
         }
 
         /// <summary>
@@ -281,6 +278,7 @@ namespace MeshFreeHandles
 #if UNITY_EDITOR
             if (UnityEditor.SceneView.currentDrawingSceneView != null) return;
 #endif
+
 
             Vector3 vp = HandleCamera.WorldToViewportPoint(targetTransform.position);
             if (vp.z < 0f) return;

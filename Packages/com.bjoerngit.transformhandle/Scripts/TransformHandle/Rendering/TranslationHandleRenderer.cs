@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SocialPlatforms;
 
 namespace MeshFreeHandles
 {
@@ -8,8 +7,6 @@ namespace MeshFreeHandles
     /// </summary>
     public class TranslationHandleRenderer : IProfileAwareRenderer
     {
-
-
         // Public constants
         public const float PLANE_SIZE_MULTIPLIER = 0.3f;
 
@@ -26,17 +23,21 @@ namespace MeshFreeHandles
         // Batching system
         private BatchedHandleRenderer batcher;
 
-        public Camera LocalCamera {get; private set;}
-
         // Constructors
         public TranslationHandleRenderer(BatchedHandleRenderer sharedBatcher)
         {
             this.batcher = sharedBatcher;
         }
 
+        public TranslationHandleRenderer(Camera camera)
+        {
+            this.batcher = new BatchedHandleRenderer(camera);
+        }
+
         public TranslationHandleRenderer()
         {
-            this.batcher = new BatchedHandleRenderer(Camera.main);
+            Debug.LogWarning("TranslationHandleRenderer created without camera - won't render!");
+            this.batcher = new BatchedHandleRenderer(null);
         }
 
         public void Render(Transform target, float scale, int hoveredAxis, HandleSpace handleSpace = HandleSpace.Local)
@@ -109,8 +110,11 @@ namespace MeshFreeHandles
                                          System.Func<int, HandleSpace, bool> shouldRenderPlane)
         {
             float size = scale * PLANE_SIZE_MULTIPLIER;
-            Camera cam = Camera.main;
-            Vector3 camForward = cam.transform.forward;
+            
+            // Get camera from batcher's render camera!
+            if (!batcher.HasValidCamera()) return;
+            
+            Vector3 camForward = batcher.GetCameraForward();
 
             for (int planeIndex = 4; planeIndex <= 6; planeIndex++)
             {

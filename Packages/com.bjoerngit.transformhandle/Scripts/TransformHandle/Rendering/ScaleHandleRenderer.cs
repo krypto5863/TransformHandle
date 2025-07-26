@@ -23,9 +23,15 @@ namespace MeshFreeHandles
             this.batcher = sharedBatcher;
         }
 
+        public ScaleHandleRenderer(Camera camera)
+        {
+            this.batcher = new BatchedHandleRenderer(camera);
+        }
+
         public ScaleHandleRenderer()
         {
-            this.batcher = new BatchedHandleRenderer();
+            Debug.LogWarning("ScaleHandleRenderer created without camera - won't render!");
+            this.batcher = new BatchedHandleRenderer(null);
         }
 
         public void Render(Transform target, float scale, int hoveredAxis, HandleSpace handleSpace = HandleSpace.Local)

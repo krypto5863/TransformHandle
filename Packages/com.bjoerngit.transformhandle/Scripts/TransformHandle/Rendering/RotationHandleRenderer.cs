@@ -22,9 +22,15 @@ namespace MeshFreeHandles
             this.batcher = sharedBatcher;
         }
 
+        public RotationHandleRenderer(Camera camera)
+        {
+            this.batcher = new BatchedHandleRenderer(camera);
+        }
+
         public RotationHandleRenderer()
         {
-            this.batcher = new BatchedHandleRenderer();
+            Debug.LogWarning("RotationHandleRenderer created without camera - won't render!");
+            this.batcher = new BatchedHandleRenderer(null);
         }
 
         public void Render(Transform target, float scale, int hoveredAxis, HandleSpace handleSpace = HandleSpace.Local)

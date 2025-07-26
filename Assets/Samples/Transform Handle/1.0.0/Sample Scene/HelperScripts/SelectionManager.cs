@@ -47,14 +47,14 @@ namespace MeshFreeHandles
            
             instance = this;
             DontDestroyOnLoad(gameObject);
-            mainCamera = Camera.main;
+            mainCamera = TransformHandleManager.Instance.HandleCamera;
         }
         
         void Update()
         {
             if (mainCamera == null)
             {
-                mainCamera = Camera.main;
+                mainCamera = TransformHandleManager.Instance.HandleCamera;
                 if (mainCamera == null) return;
             }
             
@@ -68,7 +68,7 @@ namespace MeshFreeHandles
                 if (TransformHandleManager.Instance.IsHovering)
                     return;
                 
-                Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+                Ray ray = TransformHandleManager.Instance.HandleCamera.ScreenPointToRay(Input.mousePosition);
                 RaycastHit hit;
                 
                 if (Physics.Raycast(ray, out hit, maxSelectionDistance, selectableLayerMask))

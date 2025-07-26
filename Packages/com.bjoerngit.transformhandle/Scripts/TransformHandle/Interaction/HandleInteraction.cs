@@ -8,7 +8,7 @@ namespace MeshFreeHandles
     /// </summary>
     public class HandleInteraction
     {
-        private Camera currentCamera;
+        private Camera mainCamera;
         private Transform target;
 
         // Sub-components
@@ -20,8 +20,8 @@ namespace MeshFreeHandles
 
         // Interaction state
         public int HoveredAxis { get; private set; } = -1;
-        public bool IsDragging { get; private set; }
-        public int DraggedAxis { get; private set; } = -1;
+        public bool IsDragging   { get; private set; }
+        public int DraggedAxis   { get; private set; } = -1;
 
         // Profile state
         private HandleProfile currentProfile;
@@ -29,11 +29,26 @@ namespace MeshFreeHandles
 
         public HandleInteraction(Camera camera)
         {
-            currentCamera = camera;
-            hoverDetector = new HandleHoverDetector(camera);
+            mainCamera = camera;
+            hoverDetector      = new HandleHoverDetector(camera);
             translationHandler = new TranslationDragHandler(camera);
-            rotationHandler = new RotationDragHandler(camera);
-            scaleHandler = new ScaleDragHandler(camera);
+            rotationHandler    = new RotationDragHandler(camera);
+            scaleHandler       = new ScaleDragHandler(camera);
+        }
+
+        public void SetCamera(Camera camera)
+        {
+            mainCamera = camera;
+            
+            // Update all sub-components with new camera
+            if (hoverDetector != null)
+                hoverDetector = new HandleHoverDetector(camera);
+            if (translationHandler != null)
+                translationHandler = new TranslationDragHandler(camera);
+            if (rotationHandler != null)
+                rotationHandler = new RotationDragHandler(camera);
+            if (scaleHandler != null)
+                scaleHandler = new ScaleDragHandler(camera);
         }
 
         public void UpdateTarget(Transform newTarget)
@@ -41,22 +56,16 @@ namespace MeshFreeHandles
             target = newTarget;
         }
 
-        public void SetCamera(Camera camera)
-        {
-            currentCamera = camera;
-        }
-
         /// <summary>
         /// Updates hover and drag state, taking into account handle type and space.
         /// </summary>
         public void Update(float handleScale, HandleType handleType, HandleSpace handleSpace)
         {
-            if (target == null || currentCamera == null) return;
+            if (target == null || mainCamera == null) return;
 
-            Vector2 mousePos = Input.mousePosition;
-            bool mousePressed = Input.GetMouseButtonDown(0);
-            bool mouseReleased = Input.GetMouseButtonUp(0);
-
+            Vector2 mousePos     = Input.mousePosition;
+            bool    mousePressed = Input.GetMouseButtonDown(0);
+            bool    mouseReleased= Input.GetMouseButtonUp(0);
 
             if (!IsDragging)
             {
@@ -83,13 +92,13 @@ namespace MeshFreeHandles
         /// </summary>
         public void UpdateWithProfile(float handleScale, HandleType handleType, HandleProfile profile)
         {
-            if (target == null || currentCamera == null || profile == null) return;
+            if (target == null || mainCamera == null || profile == null) return;
 
             currentProfile = profile;
 
-            Vector2 mousePos = Input.mousePosition;
-            bool mousePressed = Input.GetMouseButtonDown(0);
-            bool mouseReleased = Input.GetMouseButtonUp(0);
+            Vector2 mousePos     = Input.mousePosition;
+            bool    mousePressed = Input.GetMouseButtonDown(0);
+            bool    mouseReleased= Input.GetMouseButtonUp(0);
 
             if (!IsDragging)
             {
@@ -117,7 +126,7 @@ namespace MeshFreeHandles
 
         private void StartDrag(HandleType handleType, HandleSpace handleSpace, Vector2 mousePos)
         {
-            IsDragging = true;
+            IsDragging  = true;
             DraggedAxis = HoveredAxis;
             draggedAxisSpace = handleSpace;
 
@@ -143,7 +152,7 @@ namespace MeshFreeHandles
 
         private void StartDragWithSpace(HandleType handleType, HandleSpace axisSpace, Vector2 mousePos)
         {
-            IsDragging = true;
+            IsDragging  = true;
             DraggedAxis = HoveredAxis;
             draggedAxisSpace = axisSpace;
 
@@ -171,7 +180,7 @@ namespace MeshFreeHandles
         {
             currentDragHandler?.EndDrag();
             currentDragHandler = null;
-            IsDragging = false;
+            IsDragging  = false;
             DraggedAxis = -1;
         }
 
@@ -184,7 +193,7 @@ namespace MeshFreeHandles
             bool hasLocal = profile.IsAxisEnabled(handleType, axis, HandleSpace.Local);
             // Check if this axis is enabled in global space  
             bool hasGlobal = profile.IsAxisEnabled(handleType, axis, HandleSpace.Global);
-
+            
             // If both are enabled, we need a priority system
             // For planes (axis 4-6), we might want different logic
             if (axis >= 4 && axis <= 6)
@@ -200,7 +209,7 @@ namespace MeshFreeHandles
                 if (hasLocal) return HandleSpace.Local;
                 if (hasGlobal) return HandleSpace.Global;
             }
-
+            
             return HandleSpace.Local; // Fallback
         }
     }
