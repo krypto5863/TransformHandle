@@ -22,8 +22,6 @@ A high-performance runtime transform handle system for Unity, inspired by Unity'
 
 ## 📦 Installation
 
-## 📦 Installation
-
 ### Option 1: Package Manager (Recommended)
 1. Open Unity Package Manager (Window → Package Manager)
 2. Click the **+** button → **Add package from git URL**
