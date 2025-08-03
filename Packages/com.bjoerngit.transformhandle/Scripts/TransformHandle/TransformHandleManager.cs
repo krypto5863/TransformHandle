@@ -9,6 +9,16 @@ namespace MeshFreeHandles
     public class TransformHandleManager : MonoBehaviour
     {
         private static TransformHandleManager instance;
+        private int lastHoveredAxis = -1;
+
+        // Components
+        private HandleInteraction interaction;
+        private HandleRenderer handleRenderer;
+        private HandleProfile activeProfile;
+
+        [Header("Target")]
+        [Tooltip("The transform to manipulate with the handles.")]
+        [SerializeField] private Transform targetTransform;
 
         /// <summary>
         /// Global instance of the Transform Handle Manager
@@ -32,10 +42,6 @@ namespace MeshFreeHandles
             }
         }
 
-        [Header("Target")]
-        [Tooltip("The transform to manipulate with the handles.")]
-        [SerializeField] private Transform targetTransform;
-
         [Header("Handle Settings")]
         [Tooltip("Maintain a constant on-screen size regardless of distance.")]
         public bool maintainConstantScreenSize = true;
@@ -48,16 +54,15 @@ namespace MeshFreeHandles
         [SerializeField] private HandleType handleType = HandleType.Translation;
         [SerializeField] private HandleSpace handleSpace = HandleSpace.Local;
 
-        // Components
-        private HandleInteraction interaction;
-        private HandleRenderer handleRenderer;
-        private HandleProfile activeProfile;
+
 
         // Events
         public event Action<Transform> OnTargetChanged;
         public event Action<HandleType> OnHandleTypeChanged;
         public event Action<HandleSpace> OnHandleSpaceChanged;
         public event Action<Transform> OnTransformModified;
+        public event Action<int> OnHoverEnter;
+        public event Action<int> OnHoverExit;
 
         // Properties
 
@@ -83,6 +88,21 @@ namespace MeshFreeHandles
                     handleCamera = value;
                     UpdateCameraReferences();
                 }
+            }
+        }
+
+        public bool HandlesEnabled { get; private set; } = true;
+
+        /// <summary>Allow or block handle interacition</summary>
+        public void SetHandlesEnabled(bool enabled)
+        {
+            if (HandlesEnabled == enabled) return;
+            HandlesEnabled = enabled;
+
+            if (!enabled && lastHoveredAxis != -1)
+            {
+                OnHoverExit?.Invoke(lastHoveredAxis);
+                lastHoveredAxis = -1;
             }
         }
 
@@ -114,6 +134,8 @@ namespace MeshFreeHandles
 
         void Update()
         {
+            if (!HandlesEnabled) return;
+
             // Check if camera was destroyed
             if (handleCamera != null && !handleCamera)
             {
@@ -142,6 +164,18 @@ namespace MeshFreeHandles
                 interaction.Update(scale, handleType, handleSpace);
             }
 
+            int currentHovered = HoveredAxis;
+            if (currentHovered != lastHoveredAxis)
+            {
+                if (lastHoveredAxis != -1)
+                    OnHoverExit?.Invoke(lastHoveredAxis);
+
+                if (currentHovered != -1)
+                    OnHoverEnter?.Invoke(currentHovered);
+
+                lastHoveredAxis = currentHovered;
+            }
+
             // Check if transform was modified (for event firing)
             if (interaction.IsDragging)
             {
@@ -162,6 +196,10 @@ namespace MeshFreeHandles
         public void SetTarget(Transform target)
         {
             if (targetTransform == target) return;
+
+            if (lastHoveredAxis != -1)
+                OnHoverExit?.Invoke(lastHoveredAxis);
+            lastHoveredAxis = -1;
 
             targetTransform = target;
 
@@ -325,6 +363,9 @@ namespace MeshFreeHandles
             {
                 instance = null;
             }
+
+            OnHoverEnter = null;
+            OnHoverExit = null;
         }
 
         // Static convenience methods for easy access
@@ -342,6 +383,7 @@ namespace MeshFreeHandles
         {
             Instance.SetHandleSpace(space);
         }
+
     }
 
     // Extension methods for intuitive API
@@ -374,4 +416,6 @@ namespace MeshFreeHandles
             return TransformHandleManager.Instance.CurrentTarget == transform;
         }
     }
+
+
 }
