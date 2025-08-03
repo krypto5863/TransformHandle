@@ -40,7 +40,7 @@ Add to your `Packages/manifest.json`:
 ```
 
 ### Option 3: Unity Package 
-1. Download the latest `MeshFreeHandles_v1.0.0.unitypackage` from [Releases](https://github.com/BjoernGit/TransformHandle/releases)
+1. Download the latest `MeshFreeHandles_v1.1.0.unitypackage` from [Releases](https://github.com/BjoernGit/TransformHandle/releases)
 2. Import into Unity: Assets → Import Package → Custom Package
 3. Done! No dependencies required
 
