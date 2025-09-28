@@ -10,6 +10,7 @@ namespace MeshFreeHandles
     {
         private static TransformHandleManager instance;
         private int lastHoveredAxis = -1;
+        private bool wasDragging;
 
         // Components
         private HandleInteraction interaction;
@@ -60,7 +61,9 @@ namespace MeshFreeHandles
         public event Action<Transform> OnTargetChanged;
         public event Action<HandleType> OnHandleTypeChanged;
         public event Action<HandleSpace> OnHandleSpaceChanged;
+        public event Action<Transform> OnInteractionStarted;
         public event Action<Transform> OnTransformModified;
+        public event Action<Transform> OnInteractionEnded;
         public event Action<int> OnHoverEnter;
         public event Action<int> OnHoverExit;
 
@@ -179,7 +182,18 @@ namespace MeshFreeHandles
             // Check if transform was modified (for event firing)
             if (interaction.IsDragging)
             {
+                if (wasDragging == false)
+                {
+                    OnInteractionStarted?.Invoke(targetTransform);
+                }
+
+                wasDragging = true;
                 OnTransformModified?.Invoke(targetTransform);
+            }
+            else if(wasDragging)
+            {
+                OnInteractionEnded?.Invoke(targetTransform);
+                wasDragging = false;
             }
         }
 

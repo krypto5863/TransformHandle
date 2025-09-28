@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace MeshFreeHandles
 {
@@ -63,9 +64,9 @@ namespace MeshFreeHandles
         {
             if (target == null || mainCamera == null) return;
 
-            Vector2 mousePos     = Input.mousePosition;
-            bool    mousePressed = Input.GetMouseButtonDown(0);
-            bool    mouseReleased= Input.GetMouseButtonUp(0);
+            Vector2 mousePos     = Mouse.current.position.ReadValue();
+            bool    mousePressed = Mouse.current.leftButton.wasPressedThisFrame;
+            bool    mouseReleased= Mouse.current.leftButton.wasReleasedThisFrame;
 
             if (!IsDragging)
             {
@@ -96,9 +97,9 @@ namespace MeshFreeHandles
 
             currentProfile = profile;
 
-            Vector2 mousePos     = Input.mousePosition;
-            bool    mousePressed = Input.GetMouseButtonDown(0);
-            bool    mouseReleased= Input.GetMouseButtonUp(0);
+            Vector2 mousePos = Mouse.current.position.ReadValue();
+            bool mousePressed = Mouse.current.leftButton.wasPressedThisFrame;
+            bool mouseReleased = Mouse.current.leftButton.wasReleasedThisFrame;
 
             if (!IsDragging)
             {
